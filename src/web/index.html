@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="supported-color-schemes" content="light dark" />
+    <title>ArborMark</title>
+    <script>
+      // 防闪白：在任何样式解析前，按持久化偏好预设明暗环境。
+      // 与主题 store 的判定保持一致（localStorage 键 arbor.theme-mode / arbor.theme）。
+      (function () {
+        try {
+          var mode = localStorage.getItem("arbor.theme-mode") || "system";
+          var dark =
+            mode === "dark" ||
+            (mode === "system" &&
+              window.matchMedia("(prefers-color-scheme: dark)").matches);
+          document.documentElement.setAttribute("data-theme-mode", dark ? "dark" : "light");
+          var theme = localStorage.getItem("arbor.theme") || "arbor";
+          document.documentElement.setAttribute("data-theme", theme);
+          if (dark) document.documentElement.style.backgroundColor = "#16161a";
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

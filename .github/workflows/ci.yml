@@ -1,0 +1,387 @@
+name: CI & Release Build
+
+# ----------------------------------------------------------------------------
+# 触发策略:
+#   - push tag v*       → 测试 + 六平台 Tauri 打包 + 自动发布 Release
+#   - pull_request→main → 仅验证（前端构建 / 行尾 / Rust 测试），不打包
+#   - workflow_dispatch → 手动：可只跑测试，或按需打包
+#
+# 不监听普通分支 push：以前同一提交 push 分支 + push tag 会触发两次，
+# 分支那次只跑测试、tag 那次又跑一遍测试再打包，Actions 里看起来就是两条重复记录。
+# PR 验证与 tag 打包互不重叠，不会造成重复记录。
+# ----------------------------------------------------------------------------
+on:
+  push:
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_installers:
+        description: '构建全平台安装包（打 tag 时自动开启，不勾则只跑测试）'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  # ==========================================================================
+  # 前端产物自检（不打包安装包）
+  # ==========================================================================
+  test:
+    name: Frontend Verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+          cache-dependency-path: src/web/package-lock.json
+
+      - name: Install web dependencies
+        run: npm ci --prefix src/web
+
+      - name: Typecheck & build web frontend
+        run: npm run web:build
+
+      - name: Check tag / package.json version consistency
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          echo "tag=$TAG_VERSION package.json=$PKG_VERSION"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} 与 package.json 版本 ${PKG_VERSION} 不一致；请先统一版本再打 tag"
+            exit 1
+          fi
+
+  # ==========================================================================
+  # Windows 行尾符回归：CRLF 进索引会让构建产生整文件假 diff。
+  # ==========================================================================
+  test-windows:
+    name: Line endings (Windows)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 索引里存 CRLF 会让每次构建产生整文件假 diff。Windows 脚本除外。
+      - name: Assert text files are stored with LF
+        shell: bash
+        run: |
+          offenders=$(git ls-files --eol | grep -E '^i/(crlf|mixed)' | grep -vE '\.(bat|cmd|ps1)$' || true)
+          if [ -n "$offenders" ]; then
+            echo "$offenders" | head -20
+            echo "::error::有文本文件以 CRLF 存进索引，请检查 .gitattributes 并执行 git add --renormalize ."
+            exit 1
+          fi
+          echo "OK: 索引中的文本文件均为 LF"
+
+  # ==========================================================================
+  # Rust 编译与单元测试（迁移分支的编译体检）
+  # 开发机没有 Rust 工具链，这里是唯一能真实验证 src-tauri 的地方。
+  # ==========================================================================
+  rust:
+    name: Rust check & tests
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            lld
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: rust-linux-test
+          cache-on-failure: true
+
+      - name: cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml --all-targets
+        env:
+          CARGO_TERM_COLOR: always
+          # Linux 下用 lld 链接，避免 GNU ld 在链接阶段排队。
+          RUSTFLAGS: -C link-arg=-fuse-ld=lld
+
+  # ==========================================================================
+  # 发布前置：先创建 Release，后面各平台构建完成后直接上传安装包。
+  # Actions artifact 有 500MB 仓库配额，Windows 安装包很容易把配额打满；
+  # 发布走 Release API 不占 artifact 配额。
+  # ==========================================================================
+  prepare-release:
+    name: Prepare Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Ensure release exists
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          if ! gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            gh release create "$TAG" --repo "${GITHUB_REPOSITORY}" \
+              --title "ArborMark $TAG" --notes "ArborMark $TAG"
+          fi
+
+  # ==========================================================================
+  # Tauri 打包（macOS / Windows / Linux 均按 x64 + arm64 拆分，并行构建）
+  #
+  # 这里只负责构建，打 tag 时直接上传到已创建好的 Release；手动触发时才
+  # 上传 Actions artifact。Release 不走 artifact 配额，避免 Windows 大包
+  # 把仓库 artifact 配额打满。
+  # ==========================================================================
+  build-installers:
+    name: Build (${{ matrix.label }})
+    needs: [test, prepare-release]
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.build_installers)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 两个 macOS job 并行，各编一个架构。universal 包会让 Rust 依赖
+          # 完整编译两遍（实测 aarch64 3m09s + x86_64 再约 3m），拆开后墙钟减半。
+          - os: macos-latest
+            label: macOS-arm64
+            target: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+            bundlePath: src-tauri/target/aarch64-apple-darwin/release/bundle
+          - os: macos-latest
+            label: macOS-x64
+            target: x86_64-apple-darwin
+            args: --target x86_64-apple-darwin
+            bundlePath: src-tauri/target/x86_64-apple-darwin/release/bundle
+          # Windows / Linux 也按 CPU 架构拆分，避免 x64 包让 ARM 机器走模拟层。
+          # Windows ARM64 用 GitHub 的 windows-11-arm runner，直接编 MSVC ARM64。
+          - os: windows-latest
+            label: Windows-x64
+            target: ''
+            args: --bundles nsis
+            bundlePath: src-tauri/target/release/bundle
+          - os: windows-11-arm
+            label: Windows-arm64
+            target: aarch64-pc-windows-msvc
+            args: --target aarch64-pc-windows-msvc --bundles nsis
+            bundlePath: src-tauri/target/aarch64-pc-windows-msvc/release/bundle
+          - os: ubuntu-22.04
+            label: Linux-x64
+            target: ''
+            args: ''
+            bundlePath: src-tauri/target/release/bundle
+          - os: ubuntu-22.04-arm
+            label: Linux-arm64
+            target: aarch64-unknown-linux-gnu
+            args: --target aarch64-unknown-linux-gnu
+            bundlePath: src-tauri/target/aarch64-unknown-linux-gnu/release/bundle
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'npm'
+
+      - name: Install Linux system dependencies
+        if: startsWith(matrix.os, 'ubuntu')
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            lld
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          key: ${{ matrix.label }}
+          cache-on-failure: true
+
+      - name: Install npm dependencies
+        run: |
+          npm ci
+          npm ci --prefix src/web
+
+      # NSIS / WiX / 离线 WebView2 安装器都是打包时下载到用户缓存目录的；
+      # 不缓存的话 Windows 每次都要重新下载约 130 MB 的 WebView2 运行时。
+      - name: Cache Tauri bundler tools (Unix)
+        if: runner.os != 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/tauri
+            ~/Library/Caches/tauri
+          key: tauri-tools-${{ runner.os }}-${{ matrix.label }}
+
+      - name: Cache Tauri bundler tools (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.LOCALAPPDATA }}\tauri
+          key: tauri-tools-Windows-${{ matrix.label }}
+
+      - name: Build installers
+        uses: tauri-apps/tauri-action@v0
+        env:
+          # Linux 用 lld；其它平台留空。
+          RUSTFLAGS: ${{ startsWith(matrix.os, 'ubuntu') && '-C link-arg=-fuse-ld=lld' || '' }}
+          # 发布构建不必每次都付 fat LTO + 单 codegen unit 的代价；
+          # thin LTO 链接快很多，二进制只大一点。
+          CARGO_PROFILE_RELEASE_LTO: thin
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
+        with:
+          projectPath: .
+          args: ${{ matrix.args }}
+
+      # Windows 平台分出两个版本：
+      #   1. 标准版（不带 WebView2 离线包，约 25MB）：上面的步骤已完成构建；
+      #   2. 离线完整版（带 WebView2 完整离线包，约 200MB）：使用 tauri.conf.offline.json 覆盖再次打包。
+      # 此时 Rust 主程序已编译完成，只会重新执行 NSIS / WiX 打包流程，耗时极短。
+      - name: Build offline installer with full WebView2 (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          CARGO_PROFILE_RELEASE_LTO: thin
+          CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
+        run: |
+          BUNDLE_PATH="${{ matrix.bundlePath }}"
+
+          # 1. 暂存轻量标准版 NSIS
+          mkdir -p "$BUNDLE_PATH/std_nsis"
+          cp "$BUNDLE_PATH"/nsis/*.exe "$BUNDLE_PATH/std_nsis/" || true
+
+          # 2. 覆盖 webviewInstallMode 为 offlineInstaller 再次打包
+          npx tauri build --bundles nsis ${{ matrix.args }} --config src-tauri/tauri.conf.offline.json
+
+          # 3. 将新生成的离线版添加 -offline 后缀
+          for f in "$BUNDLE_PATH"/nsis/*.exe; do
+            if [ -f "$f" ]; then
+              mv "$f" "${f%.exe}-offline.exe"
+            fi
+          done
+
+          # 4. 恢复轻量标准版到 bundle 目录
+          mv "$BUNDLE_PATH"/std_nsis/*.exe "$BUNDLE_PATH"/nsis/ || true
+          rm -rf "$BUNDLE_PATH/std_nsis"
+
+          echo "Windows bundles ready:"
+          ls -lh "$BUNDLE_PATH"/nsis/*.exe
+
+      - name: Upload installers to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          BUNDLE="${{ matrix.bundlePath }}"
+          files=()
+          while IFS= read -r file; do
+            files+=("$file")
+          done < <(find "$BUNDLE" -type f \( \
+            -name '*.dmg' -o -name '*.exe' -o -name '*.msi' -o \
+            -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "::error::没有找到任何安装包"
+            exit 1
+          fi
+          find "$BUNDLE" -name '*.AppImage' -exec chmod +x {} +
+          printf 'uploading %s\n' "${files[@]}"
+          for attempt in 1 2 3; do
+            if gh release upload "$TAG" "${files[@]}" --repo "${GITHUB_REPOSITORY}" --clobber; then
+              exit 0
+            fi
+            echo "upload attempt ${attempt} failed, retrying..."
+            sleep 5
+          done
+          echo "::error::Release 上传失败"
+          exit 1
+
+      - name: Upload installers (manual dispatch only)
+        if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bundles-${{ matrix.label }}
+          path: |
+            ${{ matrix.bundlePath }}/dmg/*.dmg
+            ${{ matrix.bundlePath }}/nsis/*.exe
+            ${{ matrix.bundlePath }}/msi/*.msi
+            ${{ matrix.bundlePath }}/deb/*.deb
+            ${{ matrix.bundlePath }}/appimage/*.AppImage
+            ${{ matrix.bundlePath }}/rpm/*.rpm
+          if-no-files-found: error
+          compression-level: 0
+
+  # ==========================================================================
+  # 发布收尾：所有构建 job 已把资产直接传到 Release，这里做最终校验。
+  # ==========================================================================
+  publish-release:
+    name: Publish Release
+    needs: build-installers
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify release assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets[].name' | sort
+          count=$(gh release view "$TAG" --repo "${GITHUB_REPOSITORY}" --json assets --jq '.assets | length')
+          echo "release assets: $count"
+          if [ "$count" -eq 0 ]; then
+            echo "::error::Release 没有安装包资产"
+            exit 1
+          fi

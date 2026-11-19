@@ -1,0 +1,34 @@
+# ==============================================================================
+# ArborMark Rebuild - Line Ending Rules
+# ==============================================================================
+# 仓库在 Windows 上开发，构建脚本（tools/build.mjs）写文件是 LF，编辑器/工具
+# 可能写成 CRLF。不锁行尾时 git 会把整文件算成改动（曾出现单文件 1.4 万行假 diff）。
+# 统一：入库 LF，工作区也 LF。
+
+* text=auto eol=lf
+
+# Windows 脚本必须保持 CRLF，否则 cmd / PowerShell 解析会出问题
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+*.ps1  text eol=crlf
+
+# 二进制资源，禁止任何换行转换
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.icns  binary
+*.bmp   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.exe   binary
+*.dll   binary
+*.msi   binary
+*.dmg   binary

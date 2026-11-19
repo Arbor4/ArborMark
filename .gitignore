@@ -1,0 +1,76 @@
+# ==============================================================================
+# ArborMark Rebuild - Ignore Rules
+# ==============================================================================
+
+# Node dependencies
+/node_modules/
+src/web/node_modules/
+
+# Build outputs
+/dist/
+/build/
+/out/
+/release/
+src/web/dist/
+*.map
+
+# Tauri / Rust
+/src-tauri/target/
+/src-tauri/gen/schemas/
+
+# Application logs & diagnostic dumps
+*.log
+app.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime user profile / cache
+userData/
+undefined/
+conf/
+.dev-userdata/
+.npm-cache/
+recent-files.json
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Operating System files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+*- 副本*
+* - 副本*
+
+# Temporary scratch files
+scratch/
+_temp_*
+.temp_*
+.tmp/
+.test-data-menu/
+
+# Third-party downloaded sources
+third_party_sources/
+
+# Local Rust toolchain used for compile checks in this workspace
+/.toolchain/
+
+# Local runtime profile used for launch checks
+/.test-data/
+
+# dev.cmd 的本地运行目录：应用数据 + WebView2 配置
+/.dev-data/
+/.dev-webview/
+
+# WorkBuddy project data (workspace memory, local caches)
+.workbuddy/
+
+# LifeCycle local runner data
+/.lifecycle/
+lifecycle.toml

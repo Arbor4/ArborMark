@@ -1,0 +1,45 @@
+{
+  "name": "arbormark",
+  "version": "4.0.0",
+  "private": true,
+  "type": "module",
+  "description": "ArborMark - A lightweight, modern Markdown editor.",
+  "homepage": "https://github.com/Arbor4/ArborMark",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Arbor4/ArborMark.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Arbor4/ArborMark/issues"
+  },
+  "license": "GPL-3.0-or-later",
+  "author": {
+    "name": "ArborMark Team",
+    "email": "Arbor4@users.noreply.github.com"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tauri dev",
+    "start": "tauri dev",
+    "tauri": "tauri",
+    "build": "tauri build",
+    "web:dev": "npm --prefix src/web run dev",
+    "web:build": "npm --prefix src/web run build",
+    "dist": "tauri build",
+    "dist:mac": "tauri build --bundles app,dmg",
+    "dist:mac:dmg": "tauri build --bundles dmg",
+    "dist:mac:zip": "tauri build --bundles app",
+    "dist:win": "tauri build --bundles nsis,msi",
+    "dist:win:exe": "tauri build --bundles nsis",
+    "dist:win:zip": "tauri build --bundles nsis",
+    "dist:win:offline": "tauri build --bundles nsis,msi --config src-tauri/tauri.conf.offline.json",
+    "dist:linux": "tauri build --bundles deb,appimage",
+    "dist:linux:appimage": "tauri build --bundles appimage",
+    "dist:linux:deb": "tauri build --bundles deb"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.1.0"
+  }
+}

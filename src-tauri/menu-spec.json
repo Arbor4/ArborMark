@@ -1,0 +1,1746 @@
+[
+  {
+    "label": "ArborMark",
+    "submenu": [
+      {
+        "label": "关于 ArborMark",
+        "clickCode": "window.File && window.File.megaMenu && window.File.megaMenu.showAbout && window.File.megaMenu.showAbout()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Preferences",
+        "label": "偏好设置…",
+        "accelerator": "CmdOrCtrl+,",
+        "clickCode": "window.ClientCommand && window.ClientCommand.showPreferencePanel && window.ClientCommand.showPreferencePanel()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "服务",
+        "role": "services"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "隐藏 ArborMark",
+        "accelerator": "Command+H",
+        "role": "hide"
+      },
+      {
+        "label": "隐藏其他",
+        "accelerator": "Command+Alt+H",
+        "role": "hideOthers"
+      },
+      {
+        "label": "全部显示",
+        "role": "unhide"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Quit",
+        "label": "退出 ArborMark",
+        "accelerator": "Command+Q",
+        "role": "quit",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('quit')"
+      }
+    ]
+  },
+  {
+    "label": "文件",
+    "submenu": [
+      {
+        "id": "File→New",
+        "label": "新建",
+        "accelerator": "CmdOrCtrl+N",
+        "clickCode": "window.ClientCommand && window.ClientCommand.newFile && window.ClientCommand.newFile()"
+      },
+      {
+        "id": "File→New Window",
+        "label": "新建窗口",
+        "accelerator": "CmdOrCtrl+Shift+N",
+        "clickCode": "window.ClientCommand && window.ClientCommand.newWindow && window.ClientCommand.newWindow()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Open",
+        "label": "打开…",
+        "accelerator": "CmdOrCtrl+O",
+        "clickCode": "window.ClientCommand && window.ClientCommand.open && window.ClientCommand.open()"
+      },
+      {
+        "id": "File→Open Folder",
+        "label": "打开文件夹…",
+        "accelerator": "CmdOrCtrl+Shift+O",
+        "clickCode": "window.ClientCommand && window.ClientCommand.openFolder && window.ClientCommand.openFolder()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Open Quickly",
+        "label": "快速打开…",
+        "accelerator": "CmdOrCtrl+P",
+        "clickCode": "window.ClientCommand && window.ClientCommand.quickOpen && window.ClientCommand.quickOpen()"
+      },
+      {
+        "id": "File→Global Search",
+        "label": "全局搜索…",
+        "accelerator": "CmdOrCtrl+Shift+F",
+        "clickCode": "window.ClientCommand && window.ClientCommand.globalSearch && window.ClientCommand.globalSearch()"
+      },
+      {
+        "id": "File→Open Recent",
+        "label": "打开最近文件",
+        "dynamic": "recentFiles"
+      },
+      {
+        "id": "File→Recent Locations",
+        "label": "最近使用的目录",
+        "dynamic": "recentFolders"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Save",
+        "label": "保存",
+        "accelerator": "CmdOrCtrl+S",
+        "clickCode": "window.ClientCommand && window.ClientCommand.save && window.ClientCommand.save()"
+      },
+      {
+        "id": "File→Save As",
+        "label": "另存为…",
+        "accelerator": "CmdOrCtrl+Shift+S",
+        "clickCode": "window.ClientCommand && window.ClientCommand.saveAs && window.ClientCommand.saveAs()"
+      },
+      {
+        "id": "File→Save All",
+        "label": "保存全部打开的文件…",
+        "clickCode": "window.ClientCommand && window.ClientCommand.saveAll && window.ClientCommand.saveAll()"
+      },
+      {
+        "id": "File→Move To",
+        "label": "移动到…",
+        "clickCode": "window.ClientCommand && window.ClientCommand.moveTo && window.ClientCommand.moveTo()"
+      },
+      {
+        "id": "File→Reload from Disk",
+        "label": "从磁盘重新加载",
+        "clickCode": "window.ClientCommand && window.ClientCommand.reloadFromDisk && window.ClientCommand.reloadFromDisk()"
+      },
+      {
+        "id": "File→Reopen with Encoding",
+        "label": "选择编码重新打开",
+        "submenu": [
+          {
+            "id": "File→Reopen with Encoding→Auto",
+            "label": "自动",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reopenWithEncoding?.('auto')"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "File→Reopen with Encoding→UTF-8",
+            "label": "UTF-8",
+            "type": "checkbox",
+            "checked": true,
+            "clickCode": "window.File?.reloadWithEncoding?.('utf8', true); window.File?.updateEncodingMenuState?.('utf8')"
+          },
+          {
+            "id": "File→Reopen with Encoding→UTF-16 LE",
+            "label": "UTF-16 LE",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('utf16le', true); window.File?.updateEncodingMenuState?.('utf16le')"
+          },
+          {
+            "id": "File→Reopen with Encoding→UTF-16 BE",
+            "label": "UTF-16 BE",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('utf16be', true); window.File?.updateEncodingMenuState?.('utf16be')"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "File→Reopen with Encoding→Chinese Simplified (GBK)",
+            "label": "Chinese Simplified (GBK)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('gbk', true); window.File?.updateEncodingMenuState?.('gbk')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Chinese Simplified (GB18030)",
+            "label": "Chinese Simplified (GB18030)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('gb18030', true); window.File?.updateEncodingMenuState?.('gb18030')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Chinese Traditional (Big5)",
+            "label": "Chinese Traditional (Big5)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('big5', true); window.File?.updateEncodingMenuState?.('big5')"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "File→Reopen with Encoding→Japanese (SHIFT_JIS)",
+            "label": "Japanese (SHIFT_JIS)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('shift_jis', true); window.File?.updateEncodingMenuState?.('shift_jis')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Japanese (EUC-JP)",
+            "label": "Japanese (EUC-JP)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('euc-jp', true); window.File?.updateEncodingMenuState?.('euc-jp')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Korean (EUC-KR)",
+            "label": "Korean (EUC-KR)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('euc-kr', true); window.File?.updateEncodingMenuState?.('euc-kr')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Thai (TIS-620)",
+            "label": "Thai (TIS-620)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('tis-620', true); window.File?.updateEncodingMenuState?.('tis-620')"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "File→Reopen with Encoding→Western (windows-1252)",
+            "label": "Western (windows-1252)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('windows-1252', true); window.File?.updateEncodingMenuState?.('windows-1252')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Cyrillic (windows-1251)",
+            "label": "Cyrillic (windows-1251)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('windows-1251', true); window.File?.updateEncodingMenuState?.('windows-1251')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Cyrillic (ISO-8859-2)",
+            "label": "Cyrillic (ISO-8859-2)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('iso-8859-2', true); window.File?.updateEncodingMenuState?.('iso-8859-2')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Cyrillic (IBM866)",
+            "label": "Cyrillic (IBM866)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('ibm866', true); window.File?.updateEncodingMenuState?.('ibm866')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Cyrillic (IBM855)",
+            "label": "Cyrillic (IBM855)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('ibm855', true); window.File?.updateEncodingMenuState?.('ibm855')"
+          },
+          {
+            "id": "File→Reopen with Encoding→KOI8-R",
+            "label": "Cyrillic (KOI8-R)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('koi8-r', true); window.File?.updateEncodingMenuState?.('koi8-r')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Cyrillic (MacCyrillic)",
+            "label": "Cyrillic (MacCyrillic)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('maccyrillic', true); window.File?.updateEncodingMenuState?.('maccyrillic')"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "File→Reopen with Encoding→Greek (ISO-8859-7)",
+            "label": "Greek (ISO-8859-7)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('iso-8859-7', true); window.File?.updateEncodingMenuState?.('iso-8859-7')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Greek (windows-1253)",
+            "label": "Greek (windows-1253)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('windows-1253', true); window.File?.updateEncodingMenuState?.('windows-1253')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Hebrew (ISO-8859-8)",
+            "label": "Hebrew (ISO-8859-8)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('iso-8859-8', true); window.File?.updateEncodingMenuState?.('iso-8859-8')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Hebrew (windows-1255)",
+            "label": "Hebrew (windows-1255)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('windows-1255', true); window.File?.updateEncodingMenuState?.('windows-1255')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Arabic (ISO-8859-6)",
+            "label": "Arabic (ISO-8859-6)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('iso-8859-6', true); window.File?.updateEncodingMenuState?.('iso-8859-6')"
+          },
+          {
+            "id": "File→Reopen with Encoding→Arabic (windows-1256)",
+            "label": "Arabic (windows-1256)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.reloadWithEncoding?.('windows-1256', true); window.File?.updateEncodingMenuState?.('windows-1256')"
+          }
+        ]
+      },
+      {
+        "id": "File→Reopen Closed File",
+        "label": "重新打开关闭的文件",
+        "accelerator": "CmdOrCtrl+Shift+T",
+        "clickCode": "window.File?.reopenClosedFile?.()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Properties",
+        "label": "属性…",
+        "clickCode": "window.File && window.File.showProperties && window.File.showProperties()"
+      },
+      {
+        "id": "File→Open File Location",
+        "label": "打开文件位置",
+        "clickCode": "window.ClientCommand && window.ClientCommand.openFileLocation && window.ClientCommand.openFileLocation()"
+      },
+      {
+        "id": "File→Reveal in Sidebar",
+        "label": "在侧边栏中显示",
+        "clickCode": "window.File && window.File.revealInSidebar && window.File.revealInSidebar()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Import",
+        "label": "导入…",
+        "clickCode": "window.ClientCommand && window.ClientCommand.import && window.ClientCommand.import()"
+      },
+      {
+        "id": "File→Export",
+        "label": "导出",
+        "submenu": [
+          {
+            "label": "PDF",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'pdf' })"
+          },
+          {
+            "label": "HTML",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'html' })"
+          },
+          {
+            "label": "HTML (无样式)",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'html-plain' })"
+          },
+          {
+            "label": "图像",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'image' })"
+          },
+          {
+            "label": "复制为图片",
+            "clickCode": "window.ClientCommand && window.ClientCommand.copyAsSemanticHTML && window.ClientCommand.copyAsSemanticHTML()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "label": "Word (.docx)",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'docx' })"
+          },
+          {
+            "label": "OpenOffice (.odt)",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'odt' })"
+          },
+          {
+            "label": "RTF",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'rtf' })"
+          },
+          {
+            "label": "Epub",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'epub' })"
+          },
+          {
+            "label": "LaTeX",
+            "clickCode": "window.ClientCommand && window.ClientCommand.export && window.ClientCommand.export({ type: 'latex' })"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "label": "使用上次的导出设置导出",
+            "clickCode": "window.ClientCommand && window.ClientCommand.exportLast && window.ClientCommand.exportLast(false)"
+          },
+          {
+            "label": "导出并覆盖上一次导出的文件",
+            "clickCode": "window.ClientCommand && window.ClientCommand.exportLast && window.ClientCommand.exportLast(true)"
+          }
+        ]
+      },
+      {
+        "id": "File→Print",
+        "label": "打印…",
+        "accelerator": "CmdOrCtrl+Alt+P",
+        "clickCode": "window.ClientCommand && window.ClientCommand.print && window.ClientCommand.print()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Preferences",
+        "label": "偏好设置…",
+        "accelerator": "CmdOrCtrl+,",
+        "clickCode": "window.ClientCommand && window.ClientCommand.showPreferencePanel && window.ClientCommand.showPreferencePanel()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "File→Close",
+        "label": "关闭",
+        "accelerator": "CmdOrCtrl+W",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('window.close')"
+      }
+    ]
+  },
+  {
+    "label": "编辑",
+    "submenu": [
+      {
+        "id": "Edit→Undo",
+        "label": "撤消",
+        "accelerator": "CmdOrCtrl+Z",
+        "clickCode": "window.ClientCommand && window.ClientCommand.undo && window.ClientCommand.undo()"
+      },
+      {
+        "id": "Edit→Redo",
+        "label": "重做",
+        "accelerator": "Shift+Command+Z",
+        "clickCode": "window.ClientCommand && window.ClientCommand.redo && window.ClientCommand.redo()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Edit→Cut",
+        "label": "剪切",
+        "accelerator": "CmdOrCtrl+X",
+        "role": "cut"
+      },
+      {
+        "id": "Edit→Copy",
+        "label": "复制",
+        "accelerator": "CmdOrCtrl+C",
+        "role": "copy"
+      },
+      {
+        "id": "Edit→Copy as Markdown",
+        "label": "复制为 Markdown",
+        "clickCode": "window.ClientCommand && window.ClientCommand.copyAsMarkdown && window.ClientCommand.copyAsMarkdown()"
+      },
+      {
+        "id": "Edit→Copy as HTML Code",
+        "label": "复制为 HTML 代码",
+        "clickCode": "window.ClientCommand && window.ClientCommand.copyAsHTMLSource && window.ClientCommand.copyAsHTMLSource()"
+      },
+      {
+        "id": "Edit→Copy as Plain Text",
+        "label": "复制为纯文本",
+        "clickCode": "window.ClientCommand && window.ClientCommand.copyAsPlainText && window.ClientCommand.copyAsPlainText()"
+      },
+      {
+        "id": "Edit→Copy Image Content",
+        "label": "复制图片内容",
+        "clickCode": "window.File?.editor?.imgEdit?.copyImageContent?.()"
+      },
+      {
+        "id": "Edit→Paste",
+        "label": "粘贴",
+        "accelerator": "CmdOrCtrl+V",
+        "role": "paste"
+      },
+      {
+        "id": "Edit→Paste as Plain Text",
+        "label": "粘贴为纯文本",
+        "accelerator": "CmdOrCtrl+Shift+V",
+        "clickCode": "window.ClientCommand && window.ClientCommand.pasteAsPlain && window.ClientCommand.pasteAsPlain()"
+      },
+      {
+        "id": "Edit→Select All",
+        "label": "全选",
+        "accelerator": "CmdOrCtrl+A",
+        "role": "selectAll"
+      },
+      {
+        "id": "Edit→Select Line / Sentence",
+        "label": "选中当前行或句",
+        "accelerator": "CmdOrCtrl+L",
+        "clickCode": "window.File?.editor?.selection?.selectSentence?.()"
+      },
+      {
+        "id": "Edit→Select Styled Scope",
+        "label": "选中当前格式文本",
+        "accelerator": "CmdOrCtrl+E",
+        "clickCode": "window.File?.editor?.selection?.selectStyledScope?.()"
+      },
+      {
+        "id": "Edit→Select Word",
+        "label": "选中当前词",
+        "accelerator": "CmdOrCtrl+D",
+        "clickCode": "window.File?.editor?.selection?.selectWord?.()"
+      },
+      {
+        "id": "Edit→Select Paragraph / Block",
+        "label": "选中段落或块",
+        "clickCode": "window.File?.editor?.selection?.selectParagraphOrBlock?.()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Edit→Emoji and Symbols",
+        "label": "表情与符号",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.showEmojiPanel')"
+      },
+      {
+        "id": "Edit→Smart Punctuation",
+        "label": "智能标点",
+        "submenu": [
+          {
+            "id": "Edit→Smart Punctuation→Convert on Input",
+            "label": "输入时转换",
+            "type": "checkbox",
+            "checked": true,
+            "clickCode": "window.File && window.File.megaMenu && window.File.megaMenu.setSmartyPantsTiming(false)"
+          },
+          {
+            "id": "Edit→Smart Punctuation→Convert on Rendering",
+            "label": "渲染时转换",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File && window.File.megaMenu && window.File.megaMenu.setSmartyPantsTiming(true)"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Edit→Smart Punctuation→Smart Quotes",
+            "label": "智能引号",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.smartQuote;F.option.smartQuote=v;if(F.megaMenu&&typeof F.megaMenu.setSmartQuote===\"function\"){try{F.megaMenu.setSmartQuote(v);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"smartQuote\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Smart Punctuation→Smart Quotes\":{state:v}});return v})()"
+          },
+          {
+            "id": "Edit→Smart Punctuation→Smart Dashes",
+            "label": "智能破折号",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.smartDash;F.option.smartDash=v;if(F.megaMenu&&typeof F.megaMenu.setSmartDash===\"function\"){try{F.megaMenu.setSmartDash(v);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"smartDash\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Smart Punctuation→Smart Dashes\":{state:v}});return v})()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Edit→Smart Punctuation→Remap Unicode Punctuation on Parse",
+            "label": "解析时重映射 Unicode 标点",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.remapUnicodePunctuation;F.option.remapUnicodePunctuation=v;if(F.megaMenu&&typeof F.megaMenu.setRemapPunctuation===\"function\"){try{F.megaMenu.setRemapPunctuation(v);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"remapPunctuation\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Smart Punctuation→Remap Unicode Punctuation on Parse\":{state:v}});return v})()"
+          }
+        ]
+      },
+      {
+        "id": "Edit→Line Endings",
+        "label": "换行符",
+        "submenu": [
+          {
+            "id": "Edit→Line Endings→Windows Line Endings (CRLF)",
+            "label": "Windows 换行符 (CRLF)",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File && window.File.setLineEnding && (window.File.setLineEnding(true, false, true), window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting('useCRLF', true))"
+          },
+          {
+            "id": "Edit→Line Endings→Unix Line Endings (LF)",
+            "label": "Unix 换行符 (LF)",
+            "type": "checkbox",
+            "checked": true,
+            "clickCode": "window.File && window.File.setLineEnding && (window.File.setLineEnding(false, false, true), window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting('useCRLF', false))"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Edit→Line Endings→Insert Final New Line On Save",
+            "label": "保存时插入末尾换行符",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.finalNewline;F.option.finalNewline=v;if(typeof F.setFinalNewline===\"function\"){try{F.setFinalNewline(v,false,true);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"finalNewline\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Line Endings→Insert Final New Line On Save\":{state:v}});return v})()"
+          }
+        ]
+      },
+      {
+        "id": "Edit→Whitespace and Line Breaks",
+        "label": "空白与换行",
+        "submenu": [
+          {
+            "id": "Edit→Whitespace and Line Breaks→Indent first line of paragraphs",
+            "label": "段落首行缩进",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.indentFirstLine;F.option.indentFirstLine=v;if(typeof F.setIndentFirstLine===\"function\"){try{F.setIndentFirstLine(v,false,true);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"indentFirstLine\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Whitespace and Line Breaks→Indent first line of paragraphs\":{state:v}});return v})()"
+          },
+          {
+            "id": "Edit→Whitespace and Line Breaks→Preserve single line break",
+            "label": "保留单个换行",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.ignoreLineBreak;F.option.ignoreLineBreak=v;if(typeof F.setIgnoreLineBreak===\"function\"){try{F.setIgnoreLineBreak(v,false,true);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"ignoreLineBreak\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Whitespace and Line Breaks→Preserve single line break\":{state:v}});return v})()"
+          },
+          {
+            "id": "Edit→Whitespace and Line Breaks→Visible <br/>",
+            "label": "显示 <br/>",
+            "type": "checkbox",
+            "checked": true,
+            "clickCode": "(function(){var F=window.File;if(!F||!F.option)return null;var v=!F.option.hideBrAndLineBreak;F.option.hideBrAndLineBreak=v;if(typeof F.setHideBrAndLineBreak===\"function\"){try{F.setHideBrAndLineBreak(v,false,true);}catch(e){}}window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting(\"hideBrAndLineBreak\",v);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({\"Edit→Whitespace and Line Breaks→Visible <br/>\":{state:v}});return v})()"
+          }
+        ]
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Edit→Delete",
+        "label": "删除",
+        "submenu": [
+          {
+            "id": "Edit→Delete Range",
+            "label": "删除选区",
+            "clickCode": "window.ClientCommand && window.ClientCommand.deleteScope && window.ClientCommand.deleteScope()"
+          },
+          {
+            "id": "Edit→Delete Word",
+            "label": "删除当前词",
+            "clickCode": "window.ClientCommand && window.ClientCommand.deleteWord && window.ClientCommand.deleteWord()"
+          },
+          {
+            "id": "Edit→Delete Styled Scope",
+            "label": "删除当前格式文本",
+            "clickCode": "window.ClientCommand && window.ClientCommand.deleteScope && window.ClientCommand.deleteScope()"
+          },
+          {
+            "id": "Edit→Delete Line / Sentence",
+            "label": "删除当前行或句",
+            "clickCode": "window.ClientCommand && window.ClientCommand.deleteLine && window.ClientCommand.deleteLine()"
+          },
+          {
+            "id": "Edit→Delete Paragraph / Block",
+            "label": "删除段落或块",
+            "clickCode": "window.ClientCommand && window.ClientCommand.deleteBlock && window.ClientCommand.deleteBlock()"
+          }
+        ]
+      },
+      {
+        "id": "Edit→Jump To",
+        "label": "跳转",
+        "submenu": [
+          {
+            "id": "Edit→Jump to Top",
+            "label": "跳转到文首",
+            "accelerator": "CmdOrCtrl+Home",
+            "clickCode": "window.File?.editor?.selection?.jumpTop?.()"
+          },
+          {
+            "id": "Edit→Jump to Selection",
+            "label": "跳转到所选内容",
+            "clickCode": "window.File?.editor?.selection?.jumpToSelection?.()"
+          },
+          {
+            "id": "Edit→Jump to Bottom",
+            "label": "跳转到文末",
+            "accelerator": "CmdOrCtrl+End",
+            "clickCode": "window.File?.editor?.selection?.jumpBottom?.()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Edit→Jump to Line Start",
+            "label": "跳转到行首",
+            "clickCode": "window.File?.editor?.selection?.jumpToLineStart?.()"
+          },
+          {
+            "id": "Edit→Jump to Line End",
+            "label": "跳转到行尾",
+            "clickCode": "window.File?.editor?.selection?.jumpToLineEnd?.()"
+          }
+        ]
+      },
+      {
+        "id": "Edit→Copy without Theme Styling",
+        "label": "复制内容并简化格式",
+        "clickCode": "window.ClientCommand && window.ClientCommand.copyAsSemanticHTML && window.ClientCommand.copyAsSemanticHTML()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Edit→Find",
+        "label": "查找…",
+        "accelerator": "CmdOrCtrl+F",
+        "clickCode": "window.File && window.File.editor && window.File.editor.searchPanel && window.File.editor.searchPanel.showPanel()"
+      },
+      {
+        "id": "Edit→Find Next",
+        "label": "查找下一个",
+        "accelerator": "CmdOrCtrl+G",
+        "clickCode": "window.File && window.File.editor && window.File.editor.searchPanel && window.File.editor.searchPanel.highlightNext()"
+      },
+      {
+        "id": "Edit→Find Previous",
+        "label": "查找上一个",
+        "accelerator": "CmdOrCtrl+Shift+G",
+        "clickCode": "window.File && window.File.editor && window.File.editor.searchPanel && window.File.editor.searchPanel.highlightPrev()"
+      },
+      {
+        "id": "Edit→Find and Replace",
+        "label": "查找和替换…",
+        "accelerator": "CmdOrCtrl+H",
+        "clickCode": "window.File && window.File.editor && window.File.editor.searchPanel && window.File.editor.searchPanel.showPanel(true)"
+      },
+      {
+        "id": "Edit→Replace",
+        "label": "替换",
+        "clickCode": "window.File && window.File.editor && window.File.editor.searchPanel && window.File.editor.searchPanel.replaceSelection()"
+      },
+      {
+        "id": "Edit→Replace All",
+        "label": "全部替换",
+        "clickCode": "window.File && window.File.editor && window.File.editor.searchPanel && window.File.editor.searchPanel.replaceAll()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Edit→Spelling and Grammar",
+        "label": "拼写与语法",
+        "submenu": [
+          {
+            "label": "立即检查文档",
+            "clickCode": "window.File && window.File.editor && window.File.editor.spellChecker && window.File.editor.spellChecker.reset(true)"
+          },
+          {
+            "label": "显示拼写检查面板",
+            "clickCode": "window.File && window.File.editor && window.File.editor.spellChecker && window.File.editor.spellChecker.show()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Edit→Spelling and Grammar→Check Spelling While Typing",
+            "label": "键入时检查拼写",
+            "type": "checkbox",
+            "checked": true,
+            "clickCode": "(function(){var sc=window.File&&window.File.editor&&window.File.editor.spellChecker;if(!sc)return null;var enabled=sc.langMode_!=='disabled';var next=!enabled;sc.setLangMode(next?'auto':'disabled',true);window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting('checkSpellingWhileTyping',next);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({'Edit→Spelling and Grammar→Check Spelling While Typing':{state:next}});return next})()"
+          },
+          {
+            "id": "Edit→Spelling and Grammar→Check Grammar With Spelling",
+            "label": "检查拼写及语法",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var cur=window.File&&window.File.option&&window.File.option.checkGrammarWithSpelling;var next=!cur;if(window.File&&window.File.option)window.File.option.checkGrammarWithSpelling=next;window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting('checkGrammarWithSpelling',next);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({'Edit→Spelling and Grammar→Check Grammar With Spelling':{state:next}});return next})()"
+          },
+          {
+            "id": "Edit→Spelling and Grammar→Correct Spelling Automatically",
+            "label": "自动更正拼写",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "(function(){var o=window.File&&window.File.option;if(!o)return null;o.autoCorrectMisspell=!o.autoCorrectMisspell;window.JSBridge&&window.JSBridge.putSetting&&window.JSBridge.putSetting('autoCorrectMisspell',o.autoCorrectMisspell);window.JSBridge&&window.JSBridge.menu&&window.JSBridge.menu.update({'Edit→Spelling and Grammar→Correct Spelling Automatically':{state:o.autoCorrectMisspell}});return o.autoCorrectMisspell})()"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "label": "段落",
+    "submenu": [
+      {
+        "id": "Paragraph→Heading 1",
+        "label": "一级标题",
+        "accelerator": "CmdOrCtrl+1",
+        "clickCode": "window.File?.editor?.stylize?.setHeading(1)",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Heading 2",
+        "label": "二级标题",
+        "accelerator": "CmdOrCtrl+2",
+        "clickCode": "window.File?.editor?.stylize?.setHeading(2)",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Heading 3",
+        "label": "三级标题",
+        "accelerator": "CmdOrCtrl+3",
+        "clickCode": "window.File?.editor?.stylize?.setHeading(3)",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Heading 4",
+        "label": "四级标题",
+        "accelerator": "CmdOrCtrl+4",
+        "clickCode": "window.File?.editor?.stylize?.setHeading(4)",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Heading 5",
+        "label": "五级标题",
+        "accelerator": "CmdOrCtrl+5",
+        "clickCode": "window.File?.editor?.stylize?.setHeading(5)",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Heading 6",
+        "label": "六级标题",
+        "accelerator": "CmdOrCtrl+6",
+        "clickCode": "window.File?.editor?.stylize?.setHeading(6)",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Paragraph",
+        "label": "段落",
+        "accelerator": "CmdOrCtrl+0",
+        "clickCode": "window.File?.editor?.stylize?.setParagraph()",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Paragraph→Increase Heading Level",
+        "label": "提升标题级别",
+        "accelerator": "CmdOrCtrl+=",
+        "clickCode": "window.File?.editor?.stylize?.increaseHeadingLevel?.() ?? window.File.editor.stylize.increaseHeaderLevel?.()"
+      },
+      {
+        "id": "Paragraph→Decrease Heading Level",
+        "label": "降低标题级别",
+        "accelerator": "CmdOrCtrl+-",
+        "clickCode": "window.File?.editor?.stylize?.decreaseHeadingLevel?.() ?? window.File.editor.stylize.decreaseHeaderLevel?.()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Paragraph→Table",
+        "label": "表格",
+        "submenu": [
+          {
+            "id": "Paragraph→Table→Insert Table",
+            "label": "插入表格",
+            "accelerator": "Command+Alt+T",
+            "clickCode": "window.File?.editor?.tableEdit?.insertTable?.()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Paragraph→Table→Add Row Above",
+            "label": "上方插入行",
+            "clickCode": "window.File?.editor?.tableEdit?.addRow?.(true)"
+          },
+          {
+            "id": "Paragraph→Table→Add Row Below",
+            "label": "下方插入行",
+            "accelerator": "CmdOrCtrl+Enter",
+            "clickCode": "window.File?.editor?.tableEdit?.addRow?.(false)"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Paragraph→Table→Add Column Before",
+            "label": "左侧插入列",
+            "clickCode": "window.File?.editor?.tableEdit?.addCol?.(true)"
+          },
+          {
+            "id": "Paragraph→Table→Add Column After",
+            "label": "右侧插入列",
+            "clickCode": "window.File?.editor?.tableEdit?.addCol?.(false)"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Paragraph→Table→Move Row Up",
+            "label": "上移该行",
+            "accelerator": "Alt+Up",
+            "clickCode": "window.File?.editor?.tableEdit?.moveRowUpOrDown?.(true)"
+          },
+          {
+            "id": "Paragraph→Table→Move Row Down",
+            "label": "下移该行",
+            "accelerator": "Alt+Down",
+            "clickCode": "window.File?.editor?.tableEdit?.moveRowUpOrDown?.(false)"
+          },
+          {
+            "id": "Paragraph→Table→Move Column Left",
+            "label": "左移该列",
+            "accelerator": "Alt+Left",
+            "clickCode": "window.File?.editor?.tableEdit?.moveColLeftOrRight?.(true)"
+          },
+          {
+            "id": "Paragraph→Table→Move Column Right",
+            "label": "右移该列",
+            "accelerator": "Alt+Right",
+            "clickCode": "window.File?.editor?.tableEdit?.moveColLeftOrRight?.(false)"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Paragraph→Table→Delete Row",
+            "label": "删除行",
+            "accelerator": "CmdOrCtrl+Shift+Backspace",
+            "clickCode": "window.File?.editor?.tableEdit?.deleteRow?.()"
+          },
+          {
+            "id": "Paragraph→Table→Delete Column",
+            "label": "删除列",
+            "clickCode": "window.File?.editor?.tableEdit?.deleteCol?.()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Paragraph→Table→Prettify Source Code",
+            "label": "格式化表格源码",
+            "clickCode": "window.File?.editor?.tableEdit?.reformatTable?.()"
+          },
+          {
+            "id": "Paragraph→Table→Copy Table",
+            "label": "复制表格",
+            "clickCode": "window.File?.editor?.tableEdit?.copyTable?.()"
+          },
+          {
+            "id": "Paragraph→Table→Delete Table",
+            "label": "删除表格",
+            "clickCode": "window.File?.editor?.tableEdit?.deleteTable?.()"
+          }
+        ]
+      },
+      {
+        "id": "Paragraph→Code Tools",
+        "label": "代码工具",
+        "submenu": [
+          {
+            "id": "Paragraph→Code Tools→Auto Indent Selected Code",
+            "label": "自动缩进选中的代码",
+            "clickCode": "window.File?.editor?.fences?.formatContent?.(true)"
+          },
+          {
+            "id": "Paragraph→Code Tools→Auto Indent Whole Code",
+            "label": "自动缩进整个代码块",
+            "clickCode": "window.File?.editor?.fences?.formatContent?.(false)"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Paragraph→Code Tools→Copy Code Content",
+            "label": "复制代码内容",
+            "clickCode": "window.File?.editor?.fences?.copyContent?.()"
+          }
+        ]
+      },
+      {
+        "id": "Paragraph→Code Fences",
+        "label": "代码块",
+        "accelerator": "Command+Alt+C",
+        "clickCode": "window.File?.editor?.stylize?.toggleFences()",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Math Block",
+        "label": "公式块",
+        "accelerator": "Command+Alt+B",
+        "clickCode": "window.File?.editor?.stylize?.toggleMathBlock()",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Math Tools",
+        "label": "数学工具",
+        "submenu": [
+          {
+            "id": "Paragraph→Math Tools→Refresh All Math Expressions",
+            "label": "刷新所有数学公式",
+            "clickCode": "window.File?.editor?.mathBlock?.forceRefresh?.()"
+          }
+        ]
+      },
+      {
+        "id": "Paragraph→Quote",
+        "label": "引用",
+        "accelerator": "Command+Alt+Q",
+        "clickCode": "window.File?.editor?.stylize?.toggleIndent('blockquote')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Ordered List",
+        "label": "有序列表",
+        "accelerator": "Command+Alt+O",
+        "clickCode": "window.File?.editor?.stylize?.toggleIndent('ol')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Unordered List",
+        "label": "无序列表",
+        "accelerator": "Command+Alt+U",
+        "clickCode": "window.File?.editor?.stylize?.toggleIndent('ul')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Task List",
+        "label": "任务列表",
+        "accelerator": "CmdOrCtrl+Shift+X",
+        "clickCode": "window.File?.editor?.stylize?.toggleIndent('tasklist')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Paragraph→Task Status",
+        "label": "任务状态",
+        "submenu": [
+          {
+            "id": "Paragraph→Task Status→Mark as Complete",
+            "label": "标记为完成",
+            "clickCode": "window.File?.editor?.stylize?.toggleTaskStatus(true)"
+          },
+          {
+            "id": "Paragraph→Task Status→Mark as Incomplete",
+            "label": "标记为未完成",
+            "clickCode": "window.File?.editor?.stylize?.toggleTaskStatus(false)"
+          }
+        ]
+      },
+      {
+        "id": "Paragraph→Alert",
+        "label": "提醒",
+        "submenu": [
+          {
+            "id": "Paragraph→Alert→Note Block",
+            "label": "备注 (Note)",
+            "clickCode": "window.File?.editor?.stylize?.insertAlert('NOTE')"
+          },
+          {
+            "id": "Paragraph→Alert→Tip Block",
+            "label": "提示 (Tip)",
+            "clickCode": "window.File?.editor?.stylize?.insertAlert('TIP')"
+          },
+          {
+            "id": "Paragraph→Alert→Important Block",
+            "label": "重要 (Important)",
+            "clickCode": "window.File?.editor?.stylize?.insertAlert('IMPORTANT')"
+          },
+          {
+            "id": "Paragraph→Alert→Warning Block",
+            "label": "警告 (Warning)",
+            "clickCode": "window.File?.editor?.stylize?.insertAlert('WARNING')"
+          },
+          {
+            "id": "Paragraph→Alert→Caution Block",
+            "label": "严重 (Caution)",
+            "clickCode": "window.File?.editor?.stylize?.insertAlert('CAUTION')"
+          }
+        ]
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Paragraph→List Indentation",
+        "label": "列表缩进",
+        "submenu": [
+          {
+            "id": "Paragraph→List Indentation→Indent",
+            "label": "增加缩进",
+            "accelerator": "CmdOrCtrl+]",
+            "clickCode": "window.File?.editor?.UserOp?.moreIndent?.(window.File.editor)"
+          },
+          {
+            "id": "Paragraph→List Indentation→Outdent",
+            "label": "减少缩进",
+            "accelerator": "CmdOrCtrl+[",
+            "clickCode": "window.File?.editor?.UserOp?.lessIndent?.(window.File.editor)"
+          }
+        ]
+      },
+      {
+        "id": "Paragraph→Insert Paragraph Before",
+        "label": "在上方插入段落",
+        "clickCode": "window.File?.editor?.UserOp?.insertParagraph?.(true, window.File.editor)"
+      },
+      {
+        "id": "Paragraph→Insert Paragraph After",
+        "label": "在下方插入段落",
+        "clickCode": "window.File?.editor?.UserOp?.insertParagraph?.(false, window.File.editor)"
+      },
+      {
+        "id": "Paragraph→Link Reference",
+        "label": "链接引用",
+        "clickCode": "window.File?.editor?.stylize?.insertLinkReference?.() ?? window.File.editor.stylize.insertBlock('def_link')"
+      },
+      {
+        "id": "Paragraph→Footnotes",
+        "label": "脚注",
+        "clickCode": "window.File?.editor?.stylize?.insertFootnote?.() ?? window.File.editor.stylize.insertBlock('def_footnote')"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Paragraph→Horizontal Line",
+        "label": "水平分割线",
+        "clickCode": "window.File?.editor?.stylize?.insertHorizontalLine?.() ?? window.File.editor.stylize.insertBlock('hr')"
+      },
+      {
+        "id": "Paragraph→Table of Contents",
+        "label": "内容目录",
+        "clickCode": "window.File?.editor?.stylize?.insertTOC?.() ?? window.File.editor.stylize.insertBlock('toc')"
+      },
+      {
+        "id": "Paragraph→YAML Front Matter",
+        "label": "YAML Front Matter",
+        "clickCode": "window.File?.editor?.stylize?.insertYAML?.() ?? window.File.editor.stylize.insertMetaBlock()"
+      }
+    ]
+  },
+  {
+    "label": "格式",
+    "submenu": [
+      {
+        "id": "Format→Strong",
+        "label": "加粗",
+        "accelerator": "CmdOrCtrl+B",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('strong')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Emphasis",
+        "label": "斜体",
+        "accelerator": "CmdOrCtrl+I",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('em')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Underline",
+        "label": "下划线",
+        "accelerator": "CmdOrCtrl+U",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('underline')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Code",
+        "label": "代码",
+        "accelerator": "CmdOrCtrl+`",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('code')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Strike",
+        "label": "删除线",
+        "accelerator": "Alt+Shift+5",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('del')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Comment",
+        "label": "注释",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('comment')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Format→Hyperlink",
+        "label": "超链接",
+        "accelerator": "CmdOrCtrl+K",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('link')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Hyperlink Actions",
+        "label": "链接操作",
+        "submenu": [
+          {
+            "id": "Format→Hyperlink Actions→Open Link",
+            "label": "打开链接",
+            "clickCode": "window.File?.editor?.contextMenu?.openLink?.() ?? window.File.editor.openCurrentLink?.()"
+          },
+          {
+            "id": "Format→Hyperlink Actions→Copy Link Address",
+            "label": "复制链接地址",
+            "clickCode": "window.File?.editor?.contextMenu?.copyLink?.() ?? window.File.editor.copyCurrentLink?.()"
+          }
+        ]
+      },
+      {
+        "id": "Format→Image",
+        "label": "图像",
+        "submenu": [
+          {
+            "id": "Format→Image→Insert Image",
+            "label": "插入图片",
+            "accelerator": "CmdOrCtrl+Shift+I",
+            "clickCode": "window.File?.editor?.stylize?.toggleStyle('image')"
+          },
+          {
+            "id": "Format→Image→Insert Local Images…",
+            "label": "插入本地图片…",
+            "clickCode": "window.File?.editor?.imgEdit?.insertLocalImages?.()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Format→Image→Upload Image",
+            "label": "上传图片",
+            "clickCode": "window.File?.editor?.imgEdit?.uploadLocalImage?.()"
+          },
+          {
+            "id": "Format→Image→Upload All Local Images",
+            "label": "上传所有本地图片",
+            "clickCode": "window.File?.editor?.imgEdit?.uploadAllLocalImages?.()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Format→Image→When Insert Local Image",
+            "label": "当插入本地图片时",
+            "submenu": [
+              {
+                "id": "Format→Image→When Insert Local Image→Copy Image File to Folder…",
+                "label": "复制图片文件到文件夹…",
+                "type": "checkbox",
+                "checked": false,
+                "clickCode": "window.File?.editor?.imgEdit?.toggleCopyImageFileToFolder?.()"
+              },
+              {
+                "id": "Format→Image→When Insert Local Image→Upload Image",
+                "label": "上传图片",
+                "type": "checkbox",
+                "checked": false,
+                "clickCode": "window.File?.editor?.imgEdit?.toggleUploadForFile?.()"
+              }
+            ]
+          },
+          {
+            "id": "Format→Image→Use Image Root Path",
+            "label": "使用图片根路径",
+            "type": "checkbox",
+            "checked": false,
+            "clickCode": "window.File?.editor?.imgEdit?.setUseImageRootPath?.(!window.File.editor.imgEdit.isUsingImageRootPath())"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Format→Image→Switch Image Syntax",
+            "label": "转换图片语法",
+            "submenu": [
+              {
+                "id": "Format→Image→Switch Image Syntax→Markdown Style",
+                "label": "Markdown 格式",
+                "type": "checkbox",
+                "checked": true,
+                "clickCode": "window.File?.editor?.stylize?.switchImageSyntax?.(false)"
+              },
+              {
+                "id": "Format→Image→Switch Image Syntax→HTML Style",
+                "label": "HTML 格式",
+                "type": "checkbox",
+                "checked": false,
+                "clickCode": "window.File?.editor?.stylize?.switchImageSyntax?.(true)"
+              }
+            ]
+          },
+          {
+            "id": "Format→Image→Copy Image Content",
+            "label": "复制图片内容",
+            "clickCode": "window.File?.editor?.imgEdit?.copyImageContent?.()"
+          },
+          {
+            "id": "Format→Image→Zoom Image",
+            "label": "缩放图片",
+            "submenu": [
+              {
+                "label": "100%",
+                "clickCode": "window.File?.editor?.imgEdit?.zoomImage?.('100%')"
+              },
+              {
+                "label": "50%",
+                "clickCode": "window.File?.editor?.imgEdit?.zoomImage?.('50%')"
+              },
+              {
+                "label": "150%",
+                "clickCode": "window.File?.editor?.imgEdit?.zoomImage?.('150%')"
+              },
+              {
+                "label": "200%",
+                "clickCode": "window.File?.editor?.imgEdit?.zoomImage?.('200%')"
+              }
+            ]
+          },
+          {
+            "id": "Format→Image→Delete Image File",
+            "label": "删除图片文件",
+            "clickCode": "window.File?.editor?.imgEdit?.deleteImageFile?.()"
+          },
+          {
+            "id": "Format→Image→Reload All Images",
+            "label": "重新加载所有图片",
+            "clickCode": "window.File?.editor?.imgEdit?.reloadAllImages?.()"
+          },
+          {
+            "type": "separator"
+          },
+          {
+            "id": "Format→Image→Open Image Location…",
+            "label": "打开图片位置…",
+            "clickCode": "window.File?.editor?.imgEdit?.openImageLocation?.()"
+          },
+          {
+            "id": "Format→Image→Copy Image to…",
+            "label": "复制图片到…",
+            "clickCode": "window.File?.editor?.imgEdit?.copyImageToFolder?.(false)"
+          },
+          {
+            "id": "Format→Image→Rename or Move Image to…",
+            "label": "重命名或移动图片到…",
+            "clickCode": "window.File?.editor?.imgEdit?.copyImageToFolder?.(true)"
+          }
+        ]
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Format→Inline Math",
+        "label": "内联公式",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('inline_math')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Highlight",
+        "label": "高亮",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('highlight')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Superscript",
+        "label": "上标",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('superscript')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "id": "Format→Subscript",
+        "label": "下标",
+        "clickCode": "window.File?.editor?.stylize?.toggleStyle('subscript')",
+        "type": "checkbox",
+        "checked": false
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Format→Clear Format",
+        "label": "清除样式",
+        "accelerator": "CmdOrCtrl+\\",
+        "clickCode": "(window.File?.editor?.stylize?.clearStyle || window.File?.editor?.stylize?.clearFormat)?.call(window.File?.editor?.stylize)"
+      }
+    ]
+  },
+  {
+    "label": "视图",
+    "submenu": [
+      {
+        "id": "View→Source Code Mode",
+        "label": "源代码模式",
+        "type": "checkbox",
+        "accelerator": "CmdOrCtrl+/",
+        "checked": false,
+        "clickCode": "window.File && window.File.toggleSourceMode && window.File.toggleSourceMode()"
+      },
+      {
+        "id": "View→Readonly Mode",
+        "label": "只读模式",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.File && (window.File.toggleReadonlyMode ? window.File.toggleReadonlyMode() : window.File.toggleReadonly ? window.File.toggleReadonly() : null)"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "View→Focus Mode",
+        "label": "专注模式",
+        "type": "checkbox",
+        "accelerator": "F8",
+        "checked": false,
+        "clickCode": "window.File?.editor?.toggleFocusMode && window.File.editor.toggleFocusMode()"
+      },
+      {
+        "id": "View→Typewriter Mode",
+        "label": "打字机模式",
+        "type": "checkbox",
+        "accelerator": "F9",
+        "checked": false,
+        "clickCode": "window.File && window.File.editor && (window.File.editor.toggleTypewriterMode || window.File.editor.toggleTypeWriterMode) && (window.File.editor.toggleTypewriterMode || window.File.editor.toggleTypeWriterMode).call(window.File.editor)"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "View→Outline",
+        "label": "大纲",
+        "type": "checkbox",
+        "accelerator": "CmdOrCtrl+Shift+1",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleOutline && window.ClientCommand.toggleOutline()"
+      },
+      {
+        "id": "View→Articles",
+        "label": "文档列表",
+        "type": "checkbox",
+        "accelerator": "CmdOrCtrl+Shift+2",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleFileList && window.ClientCommand.toggleFileList()"
+      },
+      {
+        "id": "View→File Tree",
+        "label": "文件树",
+        "type": "checkbox",
+        "accelerator": "CmdOrCtrl+Shift+3",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleFileTree && window.ClientCommand.toggleFileTree()"
+      },
+      {
+        "id": "View→Toggle Sidebar",
+        "label": "显示／隐藏侧边栏",
+        "accelerator": "CmdOrCtrl+Shift+L",
+        "clickCode": "window.File?.editor?.library?.toggleSidebar?.()"
+      },
+      {
+        "id": "View→Search",
+        "label": "搜索",
+        "accelerator": "CmdOrCtrl+Shift+F",
+        "clickCode": "window.ClientCommand && window.ClientCommand.globalSearch && window.ClientCommand.globalSearch()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "View→Toolbar",
+        "label": "工具栏",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleToolbar && window.ClientCommand.toggleToolbar()"
+      },
+      {
+        "id": "View→Show Status Bar",
+        "label": "状态栏",
+        "type": "checkbox",
+        "checked": true,
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleStatusBar && window.ClientCommand.toggleStatusBar()"
+      },
+      {
+        "id": "View→Toggle Word Count Popover",
+        "label": "字数统计",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleWordCount && window.ClientCommand.toggleWordCount()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "实际大小",
+        "accelerator": "CmdOrCtrl+0",
+        "clickCode": "window.ClientCommand && window.ClientCommand.resetZoom && window.ClientCommand.resetZoom()"
+      },
+      {
+        "label": "放大",
+        "accelerator": "CmdOrCtrl+=",
+        "clickCode": "window.ClientCommand && window.ClientCommand.zoomIn && window.ClientCommand.zoomIn()"
+      },
+      {
+        "label": "缩小",
+        "accelerator": "CmdOrCtrl+-",
+        "clickCode": "window.ClientCommand && window.ClientCommand.zoomOut && window.ClientCommand.zoomOut()"
+      },
+      {
+        "id": "View→Switch Between Opened Documents",
+        "label": "应用内窗口切换",
+        "accelerator": "Ctrl+Tab",
+        "clickCode": "window.ClientCommand && window.ClientCommand.switchDocument && window.ClientCommand.switchDocument(false)"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "View→Always on Top",
+        "label": "保持窗口在最前端",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && (window.ClientCommand.pinWindow ? (document.body.classList.contains('always-on-top') ? window.ClientCommand.unpinWindow() : window.ClientCommand.pinWindow()) : null)"
+      },
+      {
+        "label": "切换全屏",
+        "accelerator": "Control+Command+F",
+        "role": "togglefullscreen"
+      },
+      {
+        "id": "View→Toggle DevTools",
+        "label": "开发者工具",
+        "accelerator": "Command+Alt+I",
+        "clickCode": "window.ClientCommand && window.ClientCommand.toggleDevTools && window.ClientCommand.toggleDevTools()"
+      }
+    ]
+  },
+  {
+    "label": "主题",
+    "submenu": [
+      {
+        "id": "Themes→arbor",
+        "label": "Arbor",
+        "type": "checkbox",
+        "checked": true,
+        "clickCode": "window.ClientCommand && window.ClientCommand.setTheme && window.ClientCommand.setTheme(\"arbor.css\", \"arbor\")"
+      },
+      {
+        "id": "Themes→github",
+        "label": "GitHub",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.setTheme && window.ClientCommand.setTheme(\"github.css\", \"github\")"
+      },
+      {
+        "id": "Themes→liquid-glass",
+        "label": "Liquid Glass",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.setTheme && window.ClientCommand.setTheme(\"liquid-glass.css\", \"liquid-glass\")"
+      },
+      {
+        "id": "Themes→night",
+        "label": "Night Owl",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.setTheme && window.ClientCommand.setTheme(\"night.css\", \"night\")"
+      },
+      {
+        "id": "Themes→newsprint",
+        "label": "Newsprint",
+        "type": "checkbox",
+        "checked": false,
+        "clickCode": "window.ClientCommand && window.ClientCommand.setTheme && window.ClientCommand.setTheme(\"newsprint.css\", \"newsprint\")"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "打开主题文件夹…"
+      }
+    ]
+  },
+  {
+    "label": "窗口",
+    "role": "window",
+    "submenu": [
+      {
+        "label": "最小化",
+        "accelerator": "CmdOrCtrl+M",
+        "role": "minimize"
+      },
+      {
+        "label": "缩放",
+        "role": "zoom"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "label": "前置全部窗口",
+        "role": "front"
+      }
+    ]
+  },
+  {
+    "label": "帮助",
+    "submenu": [
+      {
+        "id": "Help→What's New",
+        "label": "新特性…",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('path.openUrl', \"https://github.com/Arbor4/ArborMark/releases\")"
+      },
+      {
+        "id": "Help→Welcome",
+        "label": "欢迎使用 ArborMark…",
+        "clickCode": "(function() {\n          if (window.File && window.File.megaMenu && window.File.megaMenu.showWelcome) {\n            try { File.megaMenu.showWelcome(); } catch(e){}\n          } else if (window.JSBridge) {\n            try { JSBridge.invoke('welcome.show'); } catch(e){}\n          }\n        })()"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Help→Quick Start",
+        "label": "快速入门",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Quick Start.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Markdown Reference",
+        "label": "Markdown 语法参考",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Markdown Reference.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Markdown Demo",
+        "label": "Markdown 功能示例",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Markdown Demo.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Install and Use Pandoc",
+        "label": "安装与使用 Pandoc",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Install and Use Pandoc.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Custom Themes",
+        "label": "自定义主题",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Custom Themes.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Use Images in ArborMark",
+        "label": "在 ArborMark 中使用图片",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Use Images in ArborMark.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Data Recovery and Version Control",
+        "label": "数据恢复与版本控制",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Auto Save, Version Control and Recovery.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→More Documents",
+        "label": "更多文档…",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"More Documents.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→More Themes",
+        "label": "更多主题…",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('path.openUrl', \"https://github.com/Arbor4/ArborMark\")"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Help→Credits",
+        "label": "鸣谢",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Credits.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Change Log",
+        "label": "更新日志",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Change Log.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→Privacy Policy",
+        "label": "隐私条款",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('app.openFile', window.dirname + \"/Docs/\" + \"Privacy Policy.md\", { forceCreateWindow: true })"
+      },
+      {
+        "id": "Help→GitHub",
+        "label": "GitHub 项目主页",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('path.openUrl', \"https://github.com/Arbor4/ArborMark\")"
+      },
+      {
+        "id": "Help→Feedback",
+        "label": "反馈",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('path.openUrl', \"https://github.com/Arbor4/ArborMark/issues\")"
+      },
+      {
+        "type": "separator"
+      },
+      {
+        "id": "Help→Check for Updates",
+        "label": "检查更新…",
+        "clickCode": "window.JSBridge && window.JSBridge.invoke('setting.checkUpdates')"
+      },
+      {
+        "id": "Help→About",
+        "label": "关于",
+        "clickCode": "(function() {\n              if (window.File && window.File.megaMenu && window.File.megaMenu.closePreferencePanel) {\n                try { File.megaMenu.closePreferencePanel(); } catch(e){}\n              }\n              if (window.File && window.File.megaMenu && window.File.megaMenu.showAbout) {\n                try { File.megaMenu.showAbout(); } catch(e){}\n              }\n            })()"
+      }
+    ]
+  }
+]

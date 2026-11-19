@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ArborMark",
+  "version": "4.0.0",
+  "identifier": "com.arbor.arbormark",
+  "build": {
+    "beforeDevCommand": "npm --prefix src/web run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm --prefix src/web run build",
+    "frontendDist": "../src/web/dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [],
+    "security": {
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": []
+      }
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "../resources/icons/icon/icon_32x32.png",
+      "../resources/icons/icon/icon_128x128.png",
+      "../resources/icons/icon/icon_512x512.png",
+      "../resources/icons/icon.icns",
+      "../resources/icons/app.ico"
+    ],
+    "category": "Productivity",
+    "fileAssociations": [
+      {
+        "ext": ["md", "markdown", "mdown", "mkd", "mkdn", "mdwn", "mdtxt", "mdtext"],
+        "mimeType": "text/markdown",
+        "description": "Markdown Document",
+        "role": "Editor"
+      }
+    ],
+    "shortDescription": "Lightweight, modern Markdown editor",
+    "longDescription": "ArborMark is a lightweight, modern Markdown editor with live preview, multi-tab editing and cross-platform support.",
+    "copyright": "Copyright (C) ArborMark Team",
+    "linux": {
+      "deb": {
+        "depends": []
+      }
+    },
+    "macOS": {
+      "minimumSystemVersion": "10.15"
+    },
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "languages": [
+          "SimpChinese",
+          "English"
+        ]
+      },
+      "webviewInstallMode": {
+        "type": "embedBootstrapper",
+        "silent": true
+      },
+      "wix": {
+        "language": [
+          "en-US"
+        ]
+      }
+    },
+    "resources": {
+      "locales/": "locales"
+    }
+  }
+}
