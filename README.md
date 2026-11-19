@@ -109,6 +109,22 @@ It bridges the gap between the clean simplicity of Markdown and the visual feedb
 | **Global i18n** | 16+ languages with automatic system detection and native operating system menu synchronization |
 | **Data Safety** | Auto-save on switch, typing debounce writes, dirty tracking, and crash-safe local file storage |
 
+## Screenshots
+
+All screenshots below are captured from the English interface of ArborMark 4.0 on macOS.
+
+| Files & workspace | CodeMirror 6 source mode |
+| :---: | :---: |
+| <img src="docs/images/screenshot-en-files.png" width="420" alt="Files panel: folder tree with nested guides next to the live editor"> | <img src="docs/images/screenshot-en-source.png" width="420" alt="Source mode: Markdown plain text with syntax highlighting and code folding"> |
+| **Tables, KaTeX math & Mermaid diagrams** | **Preferences — appearance & themes** |
+| <img src="docs/images/screenshot-en-render.png" width="420" alt="Rendered table, display math and Mermaid flowchart in the WYSIWYG editor"> | <img src="docs/images/screenshot-en-settings.png" width="420" alt="Preferences dialog with appearance mode and built-in theme cards"> |
+
+<p align="center">
+  <img src="docs/images/screenshot-en-dark.png" width="820" alt="ArborMark in dark mode with the heading outline and live editor">
+  <br>
+  <em>Dark mode — every built-in theme ships light and dark variants.</em>
+</p>
+
 ## Download and install
 
 Get the installer for your platform from [Releases](https://github.com/Arbor4/ArborMark/releases):
