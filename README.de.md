@@ -32,13 +32,28 @@
 
 ## Einführung
 
-ArborMark (chinesischer Name: 简筑) ist ein unabhängiger Markdown-Editor für den Desktop, entwickelt mit **Electron** und einer eigenen Rendering-Engine für Rich Text.
+ArborMark (chinesischer Name: 简筑) ist ein moderner, extrem leichtgewichtiger WYSIWYG-Markdown-Editor für den Desktop. Entwickelt auf einem nativen Fundament mit **Tauri 2 + Rust**, kombiniert mit **React 19 + Milkdown (ProseMirror)** für flüssiges Rich-Text-Rendering in Echtzeit und **CodeMirror 6** für einen professionellen Quelltextmodus.
 
-Er verbindet die Einfachheit von Markdown mit der Unmittelbarkeit eines Rich-Text-Editors: Inhalte werden während der Eingabe gerendert, und mit einer Tastenkombination wechselt man in den Quelltextmodus. Dokumente werden immer lokal als standardkonforme `.md`-Dateien gespeichert – ohne Bindung an ein Format, ein Konto oder die Cloud.
+Er vereint die Klarheit von reinem Markdown mit dem direkten visuellen Feedback eines Textverarbeitungsprogramms: Eingaben werden sofort formatiert, und ein Tastenkürzel (`⌘/Ctrl + /`) schaltet nahtlos in den Quelltext um. Alle Dokumente bleiben als standardkonforme `.md`-Dateien sicher auf Ihrem Rechner — **keine Registrierung, keine Telemetrie, 100% lokaler Datenschutz**.
 
 - Repository: <https://github.com/Arbor4/ArborMark>
 - Fehler melden: <https://github.com/Arbor4/ArborMark/issues>
 - Downloads: <https://github.com/Arbor4/ArborMark/releases>
+
+---
+
+## Warum ArborMark?
+
+| Kriterium | ArborMark | Typische Electron-Editoren | Ihr Vorteil |
+| :--- | :--- | :--- | :--- |
+| **Dateigröße (Installer)** | **~15 MB** | 120 MB ~ 180 MB | 🚀 **90% kleiner**, sekundenschnelle Installation |
+| **RAM-Verbrauch** | **~50 MB - 80 MB** | 300 MB ~ 600 MB+ | 🍃 Extrem ressourcenschonend, reibungsloser Betrieb |
+| **Kaltstartzeit** | **< 300 ms** blitzschnell | 2 bis 4 Sekunden | ⚡ Öffnet sofort, um Gedanken festzuhalten |
+| **Local-First** | **100% offline & privat** | Cloud-Zwang / Account-Pflicht | 🔒 Vollständige Datenhoheit, keine Datenübertragung |
+| **Dual-Engine** | **Milkdown + CodeMirror 6** | Eingeschränkte Webviews oder Split-Screen | 🎨 Perfektes Zusammenspiel aus WYSIWYG und Quelltext |
+| **Multi-Fenster** | **Nativ unabhängig (⌘⇧N)** | Träge Tabs oder doppelter Speicher | 🪟 Paralleles Arbeiten mit mehreren Dokumenten |
+
+---
 
 ## Funktionen
 

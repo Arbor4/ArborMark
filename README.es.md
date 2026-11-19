@@ -41,6 +41,21 @@ Combina la sencillez de Markdown con la inmediatez de un editor enriquecido: el 
 * Notificar problemas: <https://github.com/Arbor4/ArborMark/issues>
 * Descargas: <https://github.com/Arbor4/ArborMark/releases>
 
+---
+
+## ¿Por qué elegir ArborMark?
+
+| Criterio | ArborMark | Editores Markdown basados en Electron | Su ventaja |
+| :--- | :--- | :--- | :--- |
+| **Tamaño de descarga** | **~15 MB** | 120 MB ~ 180 MB+ | 🚀 **90% más ligero**, descarga e instalación instantáneas |
+| **Consumo de memoria** | **~50 MB - 80 MB** | 300 MB ~ 600 MB+ | 🍃 Ultraligero, múltiples ventanas sin ralentizaciones |
+| **Inicio en frío** | **< 300 ms** instantáneo | 2 a 4 segundos | ⚡ Listo en milisegundos para registrar sus ideas |
+| **Local-First** | **100% sin conexión y privado** | Obligación de cuenta o sincronización en la nube | 🔒 Soberanía absoluta de sus notas y documentos |
+| **Motor dual** | **Milkdown + CodeMirror 6** | Webview única o vista dividida | 🎨 Lo mejor del formato WYSIWYG y la edición de código |
+| **Multiventana** | **Nativo e independiente (⌘⇧N)** | Pestañas lentas o memoria duplicada | 🪟 Trabaje en paralelo con varios documentos |
+
+---
+
 ## Características
 
 | Característica | Descripción |
