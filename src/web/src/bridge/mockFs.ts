@@ -497,7 +497,7 @@ const CODE_HTML = `<!doctype html>
 
 const CODE_JSON = `{
   "name": "arbormark-demo",
-  "version": "4.0.0",
+  "version": "4.0.1",
   "private": true,
   "type": "module",
   "scripts": {
