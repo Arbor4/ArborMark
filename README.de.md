@@ -44,18 +44,20 @@ Er verbindet die Einfachheit von Markdown mit der Unmittelbarkeit eines Rich-Tex
 
 | Funktion | Beschreibung |
 | :--- | :--- |
-| Live-Vorschau | Rendert beim Tippen; der aktuelle Block kann seinen Markdown-Quelltext zeigen |
-| Quelltextmodus | Wechsel zu reiner Textbearbeitung für präzise Markdown-Arbeit |
-| Gliederung und Dateibaum | Überschriften-Gliederung, Ordnerbaum, Dateiliste und globale Suche |
-| Erweiterte Syntax | Tabellen, Aufgabenlisten, Fußnoten, YAML-Front-Matter, Hoch-/Tiefstellung, Hervorhebung |
-| Formeln | Inline- und Block-LaTeX über MathJax, optional mit Nummerierung |
-| Diagramme | Mermaid (Flussdiagramm, Sequenz, Klasse, Zustand, Gantt, Kreis), Flowchart.js, Sequence |
-| Bilder | Drag & Drop, relative Pfade, Kopieren in einen Ordner, Upload zu Bildhostern |
-| Import und Export | PDF, HTML, Bilder sowie Word / EPUB / LaTeX über Pandoc |
-| Themes | Mehrere integrierte Themes; **Liquid Glass** ist der macOS-Standard |
-| Lokalisierung | 40 Sprachen, folgt dem System oder manuell wählbar |
-| Sicheres Speichern | Automatisches Speichern, Absturz- und Entwurfswiederherstellung |
-| Kommandozeile | Dateien oder Ordner über die Kommandozeile öffnen |
+| WYSIWYG-Echtzeitbearbeitung | Rendert direkt beim Tippen; Überschriften, Tabellen, Formeln, Codeblöcke und Diagramme an Ort und Stelle bearbeiten |
+| Dual-Quelltextmodus | CodeMirror 6 Reintext-Editor mit fixierten Zeilennummern, Code-Faltung und Syntax-Highlighting (Umschalten via ⌘/Ctrl + /) |
+| Navigation & Dateien | Ordnerbaum, Dateiliste, Dokument-Gliederung, Schnellöffnung (⌘P), globale Volltextsuche (⌘⇧F) |
+| Einstellungssystem | Dedizierte Bereiche für Dateien, Erscheinungsbild, Editor, Markdown, Bilder, Export und Allgemeines mit Zeilenumbruchwahl (LF/CRLF) |
+| Ergonomische Tastenkürzel | Ganze Zeile kopieren/ausschneiden ohne Markierung (⌘C / ⌘X), Strg/⌘ + Mausrad-Zoom, automatische Zeichenpaarung |
+| Tabellen & Formeln | Schwebende Symbolleiste, Zeilen/Spalten direkt einfügen & löschen, Spaltenbreiten anpassen; KaTeX-Formeln direkt editieren |
+| Diagramm-Rendering | Mermaid-, Flowchart.js- und Sequence-Diagramme mit automatischer Seitenverhältnis-Anpassung und Lazy-Loading |
+| Bilder & PDF | Drag & Drop mit relativen Pfaden, In-App-Lightbox-Bildbetrachter und integrierte PDF-Vorschau |
+| Multi-Fenster-Support | Vollständig unabhängiger nativer Mehrfenster-Workflow (⌘⇧N) für paralleles Arbeiten |
+| Import & Export | Qualitativ hochwertiger PDF- und HTML-Export; Pandoc-basierte Word / EPUB / LaTeX Konvertierung |
+| Themes | Ausgewählte integrierte Themes (inkl. **Liquid Glass**) sowie Live-Laden eigener CSS/JSON-Themes |
+| Globale Mehrsprachigkeit | Deutsch, Englisch, Chinesisch, Japanisch, Französisch, Spanisch usw. (16+ Sprachen) synchronisiert mit nativen Menüs |
+| Sicheres Speichern | Automatisches Speichern beim Dateiwechsel, Eingabe-Debounce, Dirty-State-Tracking und absturzsichere Dateien |
+| CLI & Drag-and-Drop | Schnelles Öffnen von Dateien oder Ordnern über Terminalbefehle oder Ziehen ins Fenster |
 
 ## Download und Installation
 

@@ -45,20 +45,20 @@ It combines the simplicity of Markdown with the immediacy of a rich-text editor:
 
 | Feature            | Description                                                                                |
 | :----------------- | :----------------------------------------------------------------------------------------- |
-| Live WYSIWYG       | Render while typing; edit headings, tables, math and diagrams in place                     |
-| Source mode        | CodeMirror 6 plain-text editing with syntax highlighting, ⌘/Ctrl + / to switch             |
+| Live WYSIWYG       | Render while typing; in-place editing for headings, tables, formulas, code blocks and diagrams |
+| Dual-mode source   | CodeMirror 6 plain-text mode with sticky line gutters, code folding and syntax highlighting; ⌘/Ctrl + / toggle |
 | Files & navigation | Folder tree, flat list, heading outline, quick open (⌘P) and global search (⌘⇧F)           |
-| Extended syntax    | Tables, task lists, footnotes, YAML front matter, highlight, superscript, subscript        |
-| Math               | Inline and block LaTeX via KaTeX, with optional equation numbering                         |
-| Diagrams           | Mermaid, Flowchart.js and Sequence diagrams, rendered lazily for long documents            |
-| Tables             | Floating row/column toolbar, drag to resize columns and reorder rows/columns               |
-| Images & PDF       | Drag/drop with relative paths and copy-to-folder; in-app image/PDF preview; resize & align |
-| Find & replace     | Live match count, per-match and replace-all, case toggle                                   |
-| Import and export  | PDF / HTML export; Pandoc-based Word / EPUB / LaTeX when Pandoc is installed               |
-| Themes             | Five built-in themes (incl. **Liquid Glass**) plus user CSS/JSON themes                    |
-| Localization       | Simplified Chinese / English UI, following the system or selected manually                 |
-| Safe saving        | Auto-save, dirty tracking, and crash-safe local files                                      |
-| Command line       | Open a file or folder from the command line or by dragging onto the app                    |
+| Preferences system | Dedicated Files, Appearance, Editor, Markdown, Image, Export and General settings, with LF/CRLF and factory reset |
+| Editing ergonomics | Whole-line copy/cut without selection (⌘C / ⌘X), Ctrl/⌘ + wheel zoom, smart pair matching |
+| Tables & formulas  | Floating toolbar, in-place row/col insertion, column drag-resizing; in-place KaTeX math editing and auto-numbering |
+| Diagrams           | Mermaid, Flowchart.js and Sequence diagrams with auto-aspect ratio and lazy viewport rendering |
+| Images & PDF       | Drag & paste to local storage, relative path preferences, in-app lightbox viewer and PDF preview |
+| Multi-window       | Native independent multi-window workflow (⌘⇧N) for seamless multi-document editing         |
+| Import and export  | High-quality PDF / HTML export; Pandoc-based Word / EPUB / LaTeX conversions               |
+| Themes             | Curated built-in themes (incl. **Liquid Glass**) plus live user CSS/JSON theme loading     |
+| Global i18n        | 16+ languages (Simplified/Traditional Chinese, English, Japanese, Korean, German, French, etc.) synced with native menus |
+| Safe saving        | Auto-save on switch, typing debounced writes, dirty tracking, and crash-safe local files   |
+| Command line & drag| Open files or folders from the CLI or by dragging them onto the window                     |
 
 ## Download and install
 

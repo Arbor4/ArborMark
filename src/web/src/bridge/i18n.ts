@@ -4,7 +4,23 @@
  */
 import { useUi } from "@/stores/ui";
 
-export type Lang = "zh-Hans" | "en";
+export type Lang =
+  | "system"
+  | "zh-Hans"
+  | "zh-Hant"
+  | "en"
+  | "ja-JP"
+  | "ko-KR"
+  | "de-DE"
+  | "fr-FR"
+  | "es-ES"
+  | "ru-RU"
+  | "it-IT"
+  | "pt-BR"
+  | "nl-NL"
+  | "pl-PL"
+  | "tr-TR"
+  | "ar-SA";
 
 const zh: Record<string, string> = {
   "nav.files": "文件", "nav.outline": "大纲", "nav.search": "搜索", "nav.appearance": "外观", "nav.settings": "偏好设置",
@@ -230,28 +246,113 @@ const ZH2EN: Record<string, string> = {
   "每行一个图片路径或 URL": "One image path or URL per line",
   "滚轮缩放 · 拖拽平移 · 双击切换原始/适应尺寸 · Esc 关闭": "Wheel zoom · drag pan · double-click fit/actual · Esc close",
   "大纲为空": "Outline empty", "打开文档后，这里会显示标题结构": "Open a document to see its heading structure", "没有标题": "No headings", "用 # 开始一个标题，大纲会自动出现": "Start a heading with # and the outline appears", "文档大纲": "Document outline", "按文件名搜索…": "Search by filename…", "快速打开文件": "Quick open file", "文件": "Files", "视图": "View", "about.body": "轻量、现代的 Markdown 编辑器。编辑器内核：Milkdown（ProseMirror）所见即所得 · 源码：CodeMirror 6 · 渲染：markdown-it + KaTeX + highlight.js + Mermaid。主题系统完全开放，欢迎创作你自己的主题。",
+  "保存与启动": "Saving & startup", "默认格式": "Default format", "默认文件类型 / 扩展名": "Default file type / extension",
+  "新建未指定后缀的文件时默认采用的扩展名": "Default extension for new files without one", "默认扩展名": "Default extension",
+  "默认换行符 (EOL)": "Default line ending (EOL)", "新文件的换行符标准": "Line ending standard for new files", "默认换行符": "Default line ending",
+  "文件末尾保留换行符": "Keep final newline", "保存文件时若末尾无换行则自动追加一个换行符": "Automatically append a newline if missing on save",
+  "最近使用的目录与历史": "Recent directories & history", "历史文件与目录记录": "Recent files & directories", "清除历史记录": "Clear history",
+  "清除历史文件记录": "Clear history records", "已清除历史文件与目录记录": "Cleared recent files & directories",
+  "切换文件时自动保存": "Auto save on switch", "切换文档时自动将未保存更改写回磁盘": "Automatically write unsaved changes when switching files",
+  "复制/剪切整行": "Copy/cut whole line", "复制或剪切时，若没有文字被选中，则处理光标所在的一整行": "When nothing is selected, copy or cut the entire line at cursor",
+  "语法偏好": "Syntax preferences", "无序列表符号": "Unordered list marker", "插入无序列表时的默认项目标记": "Default marker when inserting unordered lists",
+  "无序列表标记": "Unordered list marker", "默认代码块语言": "Default code block language",
+  "新建代码块未指定语言时的默认语法识别": "Default syntax when creating a code block without language", "无默认语言（纯文本）": "No default language (plain text)",
+  "排版与缩放": "Typography & zoom", "鼠标滚轮缩放": "Mouse wheel zoom", "按住 Ctrl 或 ⌘ 滚动鼠标滚轮放大/缩小编辑器字号": "Hold Ctrl or ⌘ and scroll wheel to zoom font size",
+  "界面与状态栏": "Interface & status bar", "阅读速度": "Reading speed", "状态栏预估阅读时长的参考基准": "Reference baseline for estimated reading time in status bar",
+  "导出选项": "Export options", "导出后打开所在目录": "Reveal exported file in folder",
+  "导出 PDF 或 HTML 文件后，自动在系统文件管理器中定位目标文件": "Automatically locate the exported file in file explorer",
+  "支持格式": "Supported formats", "会话与文件树": "Session & file tree", "设置备份与迁移": "Settings backup & migration",
+  "重置选项": "Reset options", "恢复默认偏好设置": "Reset all preferences to default",
+  "将所有偏好设置重置为初始默认值": "Reset all preferences to factory defaults",
+  "已恢复默认偏好设置": "Preferences restored to defaults", "重置全部警告提示对话框": "Reset all warning dialogs",
+  "恢复所有被勾选「不再提示」的确认弹窗": "Restore all dismissed confirmation prompts", "重置对话框": "Reset dialogs",
+  "已重置所有警告提示": "All warning dialogs reset",
 };
 
-const dicts: Record<Lang, Record<string, string>> = { "zh-Hans": zh, en };
+/** 繁体中文映射 */
+const zhHant: Record<string, string> = {
+  ...zh,
+  "文件": "檔案", "偏好设置": "偏好設定", "外观": "外觀", "编辑器": "編輯器", "图片": "圖片", "导出": "匯出", "搜索": "搜尋", "通用": "一般",
+  "快捷键": "快捷鍵", "关于": "關於", "大纲": "大綱", "保存": "儲存", "专注模式": "專注模式", "打字机模式": "打字機模式", "源码模式": "源碼模式",
+  "编辑模式": "編輯模式", "显示行号": "顯示行號", "自动保存": "自動儲存", "主题": "佈景主題", "排版": "排版", "界面": "介面",
+  "界面语言": "介面語言", "复制": "複製", "剪切": "剪下", "粘贴": "貼上", "新建文件": "新增檔案", "新建文件夹": "新增資料夾",
+  "打开文件夹": "開啟資料夾", "清除历史记录": "清除歷史記錄", "恢复默认偏好设置": "還原預設偏好設定",
+};
 
-export function currentLang(): Lang {
+/** 日文常用词映射 */
+const jaJP: Record<string, string> = {
+  ...en,
+  "settings.title": "環境設定", "settings.appearance": "外観", "settings.file": "ファイル", "settings.editor": "エディタ",
+  "settings.markdown": "Markdown", "settings.image": "画像", "settings.export": "エクスポート", "settings.search": "検索",
+  "settings.general": "一般", "settings.shortcuts": "ショートカット", "settings.about": "情報",
+  "nav.files": "ファイル", "nav.outline": "アウトライン", "nav.search": "検索", "nav.appearance": "外観", "nav.settings": "設定",
+  "panel.files": "ファイル", "panel.outline": "アウトライン", "panel.search": "検索",
+  "toolbar.save": "保存", "find.placeholder": "ファイル内を検索…", "common.copied": "コピー完了", "common.saved": "保存完了",
+};
+
+const dicts: Record<string, Record<string, string>> = {
+  "zh-Hans": zh,
+  "zh-Hant": zhHant,
+  en,
+  "ja-JP": jaJP,
+};
+
+export function resolveLang(pref?: string): string {
+  if (!pref || pref === "system") {
+    const nav = typeof navigator !== "undefined" ? navigator.language : "zh-Hans";
+    if (nav.startsWith("zh-TW") || nav.startsWith("zh-HK") || nav.startsWith("zh-MO") || nav.startsWith("zh-Hant")) return "zh-Hant";
+    if (nav.startsWith("zh")) return "zh-Hans";
+    if (nav.startsWith("ja")) return "ja-JP";
+    if (nav.startsWith("ko")) return "ko-KR";
+    if (nav.startsWith("de")) return "de-DE";
+    if (nav.startsWith("fr")) return "fr-FR";
+    if (nav.startsWith("es")) return "es-ES";
+    if (nav.startsWith("ru")) return "ru-RU";
+    if (nav.startsWith("it")) return "it-IT";
+    if (nav.startsWith("pt")) return "pt-BR";
+    return "en";
+  }
+  return pref;
+}
+
+export function currentLang(): string {
   const l = useUi.getState().prefs.language;
-  return l === "en" ? "en" : "zh-Hans";
+  return resolveLang(String(l ?? "zh-Hans"));
 }
 
 export function t(key: string, vars?: Record<string, string | number>): string {
   const lang = currentLang();
-  let s = lang === "en" ? (en[key] ?? ZH2EN[key] ?? key) : (zh[key] ?? key);
+  const dict = dicts[lang];
+  let s: string;
+  if (dict && dict[key]) {
+    s = dict[key];
+  } else if (lang.startsWith("zh")) {
+    s = zh[key] ?? key;
+  } else {
+    s = en[key] ?? ZH2EN[key] ?? key;
+  }
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
   return s;
 }
 
 /** 组件订阅语言变化。 */
 export function useLang() {
-  const lang = useUi((s) => (s.prefs.language === "en" ? "en" : "zh-Hans")) as Lang;
-  return { lang, t: (key: string, vars?: Record<string, string | number>) => {
-    let s = lang === "en" ? (en[key] ?? ZH2EN[key] ?? key) : (zh[key] ?? key);
-    if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
-    return s;
-  } };
+  const pref = useUi((s) => s.prefs.language);
+  const lang = resolveLang(String(pref ?? "zh-Hans"));
+  return {
+    lang,
+    t: (key: string, vars?: Record<string, string | number>) => {
+      const dict = dicts[lang];
+      let s: string;
+      if (dict && dict[key]) {
+        s = dict[key];
+      } else if (lang.startsWith("zh")) {
+        s = zh[key] ?? key;
+      } else {
+        s = en[key] ?? ZH2EN[key] ?? key;
+      }
+      if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
+      return s;
+    },
+  };
 }

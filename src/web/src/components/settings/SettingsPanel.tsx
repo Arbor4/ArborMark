@@ -731,9 +731,31 @@ function GeneralSettings() {
           control={
             <Select
               value={String(prefs.language ?? "zh-Hans")}
-              onChange={(v) => setPref("language", v)}
+              onChange={(v) => {
+                setPref("language", v);
+                import("@/bridge/ipc").then(({ invoke }) => {
+                  invoke("setting.set", { userLanguage: v === "system" ? "" : v }).catch(() => {});
+                });
+              }}
               ariaLabel="界面语言"
-              options={[["zh-Hans", t("简体中文")], ["en", "English"]]}
+              options={[
+                ["system", t("跟随系统")],
+                ["zh-Hans", "简体中文"],
+                ["zh-Hant", "繁體中文"],
+                ["en", "English"],
+                ["ja-JP", "日本語"],
+                ["ko-KR", "한국어"],
+                ["de-DE", "Deutsch"],
+                ["fr-FR", "Français"],
+                ["es-ES", "Español"],
+                ["ru-RU", "Русский"],
+                ["it-IT", "Italiano"],
+                ["pt-BR", "Português (Brasil)"],
+                ["nl-NL", "Nederlands"],
+                ["pl-PL", "Polski"],
+                ["tr-TR", "Türkçe"],
+                ["ar-SA", "العربية"],
+              ]}
             />
           }
         />

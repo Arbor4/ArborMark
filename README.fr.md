@@ -45,18 +45,20 @@ Il réunit la simplicité de Markdown et l'immédiateté d'un éditeur de texte 
 
 | Fonction             | Description                                                                                       |
 | :------------------- | :------------------------------------------------------------------------------------------------ |
-| Aperçu en direct     | Rendu pendant la saisie ; le bloc courant peut afficher sa source Markdown                        |
-| Mode source          | Bascule vers l'édition en texte brut pour un travail Markdown précis                              |
-| Plan et arborescence | Plan des titres, arborescence des dossiers, liste de fichiers et recherche globale                |
-| Syntaxe étendue      | Tableaux, listes de tâches, notes de bas de page, YAML Front Matter, exposant, indice, surlignage |
-| Mathématiques        | LaTeX en ligne et en bloc via MathJax, avec numérotation optionnelle                              |
-| Diagrammes           | Mermaid (flux, séquence, classe, état, Gantt, camembert), Flowchart.js, Sequence                  |
-| Images               | Glisser-déposer, chemins relatifs, copie vers un dossier, envoi vers un hébergeur d'images        |
-| Import et export     | PDF, HTML, images, et Word / EPUB / LaTeX via Pandoc                                              |
-| Thèmes               | Plusieurs thèmes intégrés ; **Liquid Glass** est le thème macOS par défaut                        |
-| Localisation         | 40 langues, selon le système ou choisies manuellement                                             |
-| Sauvegarde sûre      | Enregistrement automatique, récupération après plantage et des brouillons                         |
-| Ligne de commande    | Ouvrir un fichier ou un dossier depuis la ligne de commande                                       |
+| WYSIWYG en temps réel | Rendu instantané pendant la saisie ; modification sur place des titres, tableaux, formules, blocs de code et diagrammes |
+| Mode source double   | Édition texte brut CodeMirror 6 avec gouttière de numérotation fixe, repliage de code et coloration (⌘/Ctrl + /) |
+| Fichiers et navigation | Arborescence de dossiers, liste plate, plan des titres, ouverture rapide (⌘P), recherche globale (⌘⇧F) |
+| Système de préférences | Panneaux dédiés (Fichiers, Apparence, Éditeur, Markdown, Image, Export, Général) avec choix des sauts de ligne (LF/CRLF) |
+| Ergonomie d'édition  | Copier/couper la ligne entière sans sélection (⌘C / ⌘X), zoom molette avec Ctrl/⌘, appariement automatique des symboles |
+| Tableaux et formules | Barre d'outils flottante, insertion/suppression de lignes/colonnes, redimensionnement ; formules KaTeX éditables sur place |
+| Rendu de diagrammes  | Diagrammes Mermaid, Flowchart.js et Sequence avec conservation automatique du ratio et rendu différé |
+| Images et PDF        | Glisser-déposer local, préférences de chemins relatifs, visionneuse d'images intégrée et aperçu PDF |
+| Support multi-fenêtres | Flux de travail multi-fenêtres natif et indépendant (⌘⇧N) pour éditer plusieurs documents simultanément |
+| Import et export     | Export PDF et HTML de haute qualité ; conversion Word / EPUB / LaTeX via Pandoc                   |
+| Système de thèmes    | Thèmes intégrés élégants (dont **Liquid Glass**) et chargement à chaud de thèmes CSS/JSON personnalisés |
+| Multilingue mondial  | Français, Anglais, Chinois (simplifié/traditionnel), Allemand, Espagnol, etc. (16+ langues) synchronisées avec les menus |
+| Sauvegarde sécurisée | Sauvegarde auto au changement de fichier, anti-rebond à la frappe, suivi des modifications et sécurité anti-plantage |
+| CLI et glisser-déposer | Ouvrez rapidement des fichiers ou dossiers depuis le terminal ou en les déposant dans la fenêtre |
 
 ## Téléchargement et installation
 
