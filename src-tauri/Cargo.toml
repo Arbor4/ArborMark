@@ -1,6 +1,6 @@
 [package]
 name = "arbormark"
-version = "4.0.1"
+version = "4.0.3"
 description = "ArborMark - a lightweight, modern Markdown editor"
 authors = ["ArborMark Team <Arbor4@users.noreply.github.com>"]
 license = "GPL-3.0-or-later"

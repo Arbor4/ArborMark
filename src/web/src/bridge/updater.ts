@@ -1,7 +1,7 @@
 import { fs } from "@/bridge/fs";
 import { useUi } from "@/stores/ui";
 
-export const CURRENT_VERSION = "4.0.1";
+export const CURRENT_VERSION = "4.0.3";
 export const GITHUB_REPO = "Arbor4/ArborMark";
 
 export interface UpdateInfo {
