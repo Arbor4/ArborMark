@@ -32,6 +32,7 @@ interface WorkspaceState {
   content: string;
   savedContent: string;
   dirty: boolean;
+  reloadToken: number;
   loading: boolean;
   error: string | null;
   recentFolders: { path: string; name: string; pinned: boolean }[];
@@ -50,6 +51,8 @@ interface WorkspaceState {
   openHelp: (name: string, content: string) => void;
   setContent: (text: string) => void;
   setBaseline: (text: string) => void;
+  reloadDocument: (text?: string) => Promise<boolean>;
+  reloadFromDisk: () => Promise<boolean>;
   save: () => Promise<boolean>;
   createFile: (parentDir: string, name?: string) => Promise<string | null>;
   createFolder: (parentDir: string, name?: string) => Promise<string | null>;
@@ -59,6 +62,7 @@ interface WorkspaceState {
   duplicate: (path: string) => Promise<void>;
   loadRecent: () => Promise<void>;
   clearRecent: () => Promise<void>;
+  checkExternalChange: () => Promise<void>;
 }
 
 function toNode(entry: FsEntry): TreeNode {
@@ -174,6 +178,8 @@ export function prefetchDir(path: string): void {
 const HEAVY_DIRS = new Set(["node_modules", "dist", "target", "build", "out", "release", ".git", ".toolchain", ".next"]);
 
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let savePromise: Promise<boolean> | null = null;
+let saveQueued = false;
 
 export const useWorkspace = create<WorkspaceState>((set, get) => ({
   rootPath: "",
@@ -186,6 +192,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   content: "",
   savedContent: "",
   dirty: false,
+  reloadToken: 0,
   loading: false,
   error: null,
   recentFolders: [],
@@ -438,8 +445,12 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   openPath: (path) => serialized(async () => {
     const st = await fs.stat(path).catch(() => null);
     if (!st?.exists || st.isDir) return;
-    const dir = pathUtil.parent(path);
-    if (get().rootPath !== dir) {
+    const { rootPath } = get();
+    const inWorkspace = Boolean(
+      rootPath && (path === rootPath || path.startsWith(rootPath.endsWith("/") ? rootPath : rootPath + "/"))
+    );
+    if (!inWorkspace) {
+      const dir = pathUtil.parent(path);
       await get().openFolder(dir).catch(() => {});
     }
     await get().openFile(path);
@@ -470,23 +481,74 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     set({ content: text, savedContent: text, dirty: false });
   },
 
-  save: async () => {
-    const { activePath, content, dirty } = get();
-    if (!activePath || !dirty) return true;
-    try {
-      // 保存时插入末尾换行符（偏好设置）
-      let out = finalNewlineEnabled && content.length > 0 && !content.endsWith("\n") ? content + "\n" : content;
-      const eol = useUi.getState().prefs.defaultEol;
-      if (eol === "crlf") {
-        out = out.replace(/\r?\n/g, "\r\n");
+  // 从外部或磁盘全量重载文档：递增 reloadToken 强行同步底层富文本/源码编辑器
+  reloadDocument: async (text?: string) => {
+    const { activePath } = get();
+    if (!activePath || activePath.startsWith("help://")) return false;
+    let nextContent = text;
+    if (nextContent === undefined) {
+      try {
+        nextContent = await fs.readFile(activePath);
+      } catch (err) {
+        console.error("reloadDocument readFile error", err);
+        return false;
       }
-      await fs.writeFile(activePath, out);
-      set({ content: out, savedContent: out, dirty: false });
-      return true;
-    } catch (err) {
-      set({ error: `保存失败：${err}` });
-      return false;
     }
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    set((s) => ({
+      content: nextContent,
+      savedContent: nextContent,
+      dirty: false,
+      reloadToken: s.reloadToken + 1,
+    }));
+    return true;
+  },
+
+  // 重新从磁盘读取文档与刷新目录树
+  reloadFromDisk: async () => {
+    const reloadedDoc = await get().reloadDocument();
+    if (get().rootPath) {
+      await get().refresh().catch(() => {});
+    }
+    return reloadedDoc;
+  },
+
+  save: async () => {
+    if (savePromise) {
+      saveQueued = true;
+      return savePromise;
+    }
+    const executeSave = async (): Promise<boolean> => {
+      try {
+        const { activePath, content, dirty } = get();
+        if (!activePath || activePath.startsWith("help://") || !dirty) return true;
+        // 保存时插入末尾换行符（偏好设置）
+        let out = finalNewlineEnabled && content.length > 0 && !content.endsWith("\n") ? content + "\n" : content;
+        const eol = useUi.getState().prefs.defaultEol;
+        if (eol === "crlf") {
+          out = out.replace(/\r?\n/g, "\r\n");
+        }
+        await fs.writeFile(activePath, out);
+        const currentContent = get().content;
+        if (currentContent === content || currentContent === out) {
+          set({ content: out, savedContent: out, dirty: false });
+        } else {
+          set({ savedContent: out, dirty: true });
+        }
+        return true;
+      } catch (err) {
+        set({ error: `保存失败：${err}` });
+        return false;
+      } finally {
+        savePromise = null;
+        if (saveQueued) {
+          saveQueued = false;
+          void get().save();
+        }
+      }
+    };
+    savePromise = executeSave();
+    return savePromise;
   },
 
   createFile: async (parentDir, name) => {
@@ -668,6 +730,30 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       set({ recentFolders: [] });
     } catch {
       /* ignore */
+    }
+  },
+
+  checkExternalChange: async () => {
+    const { activePath, savedContent, dirty } = get();
+    if (!activePath || activePath.startsWith("help://")) return;
+    try {
+      const diskText = await fs.readFile(activePath);
+      if (diskText === savedContent) return;
+
+      if (!dirty) {
+        await get().reloadDocument(diskText);
+        useUi.getState().toast("文件已被外部修改，已自动重新加载", "info");
+      } else {
+        const ok = window.confirm(
+          `文件「${pathUtil.name(activePath)}」在磁盘上已被外部程序修改。\n\n是否从磁盘重新加载最新内容？\n（选择“确定”丢弃当前未保存内容并重载；选择“取消”保留当前编辑）`
+        );
+        if (ok) {
+          await get().reloadDocument(diskText);
+          useUi.getState().toast("已重新加载磁盘最新版本", "success");
+        }
+      }
+    } catch {
+      /* 外部删除或无权限，静默跳过 */
     }
   },
 }));

@@ -307,6 +307,7 @@ pub async fn ipc_invoke(
 
         // ---- 缩放与窗口状态 ----
         "setZoom" => window::set_zoom_payload(&window, &payload),
+        "window.reportFocus" => window::report_focus(&window, &state),
         "window.selectNextTab" => window::cycle_window(&app, &window, true),
         "window.selectPreviousTab" => window::cycle_window(&app, &window, false),
         "window.setInSourceMode" | "window.setMenuBarVisibility" | "window.loadFinished"

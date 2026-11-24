@@ -115,19 +115,15 @@ async function doExport(opts: { type: string }) {
   const md = activeContent();
   try {
     if (type === "html" || type === "html-plain") {
-      const body = renderMarkdown(md);
-      const html =
-        type === "html"
-          ? `<!doctype html><html><head><meta charset="utf-8"><title>${name}</title><style>body{font-family:-apple-system,sans-serif;max-width:860px;margin:40px auto;padding:0 20px;line-height:1.7;color:#1f2328}pre{background:#f6f8fa;padding:12px;border-radius:8px;overflow:auto}code{font-family:ui-monospace,monospace}table{border-collapse:collapse}th,td{border:1px solid #d0d7de;padding:6px 12px}blockquote{border-left:3px solid #d0d7de;margin:0;padding-left:16px;color:#59636e}img{max-width:100%}</style></head><body>${body}</body></html>`
-          : `<!doctype html><html><head><meta charset="utf-8"><title>${name}</title></head><body>${body}</body></html>`;
-      download(`${name}.html`, html, "text/html");
-      ui().toast(`已导出 HTML：${name}.html`, "success");
+      const { exportMarkdownAsHtml } = await import("@/bridge/exportUtils");
+      await exportMarkdownAsHtml(name, md, type === "html");
       return;
     }
     if (type === "pdf") {
       if (isTauri()) {
         try {
           await invoke("export.print", {});
+          ui().toast("已调起打印/PDF导出，支持多页完整输出", "info");
           return;
         } catch {
           /* 回退到 webview 打印 */
@@ -137,24 +133,20 @@ async function doExport(opts: { type: string }) {
       return;
     }
     if (type === "image") {
-      if (isTauri()) {
-        try {
-          await invoke("export.captureImage", { path: ws().activePath });
-          ui().toast("已导出图像", "success");
-          return;
-        } catch {
-          /* fallthrough */
-        }
-      }
-      window.print();
+      const { exportMarkdownAsImage } = await import("@/bridge/exportUtils");
+      await exportMarkdownAsImage(name, md);
       return;
     }
     // Office / Epub 等需要 Pandoc
     if (isTauri()) {
       try {
-        const res = await invoke(`export.${type}`, { path: ws().activePath, type });
+        const res = await invoke<any>(`export.${type}`, { path: ws().activePath, type });
         if (res) {
-          ui().toast(`已导出 ${type.toUpperCase()}`, "success");
+          const exportPath = typeof res === "string" ? res : ws().activePath ?? "";
+          ui().toast(`已导出 ${type.toUpperCase()}`, "success", exportPath ? {
+            label: "打开所在文件夹",
+            run: () => fs.showInFolder(exportPath),
+          } : undefined);
           return;
         }
       } catch {
@@ -208,6 +200,16 @@ let installed = false;
 export function installMenuBridge() {
   if (installed) return;
   installed = true;
+  window.addEventListener("focus", () => {
+    invoke("window.reportFocus", {}).catch(() => {});
+    ws().checkExternalChange().catch(() => {});
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      ws().checkExternalChange().catch(() => {});
+    }
+  });
+  invoke("window.reportFocus", {}).catch(() => {});
   EC.spellChecker.langMode_ = ui().prefs.spellcheck ? "auto" : "disabled";
   window.__arborOpenPath = (path) => {
     if (path) ws().openPath(path).catch(() => {});
@@ -372,7 +374,10 @@ export function installMenuBridge() {
       await fs.writeFile(path, activeContent());
       await ws().refresh();
       await ws().openFile(path);
-      ui().toast(`已另存为 ${name}`, "success");
+      ui().toast(`已另存为 ${name}`, "success", {
+        label: "打开所在文件夹",
+        run: () => fs.showInFolder(path),
+      });
     },
     saveAll: () => ws().save().then(() => ui().toast("已保存全部", "success")),
     moveTo: async () => {
@@ -383,11 +388,12 @@ export function installMenuBridge() {
       else ui().toast(out.errors[0] ?? "已在该位置", out.errors.length ? "danger" : "info");
     },
     reloadFromDisk: async () => {
-      const p = ws().activePath;
-      if (p) {
-        const text = await fs.readFile(p);
-        ws().setContent(text);
+      const { rootPath, reloadFromDisk } = ws();
+      const reloadedDoc = await reloadFromDisk();
+      if (reloadedDoc) {
         ui().toast("已从磁盘重新加载", "success");
+      } else if (rootPath) {
+        ui().toast("目录已从磁盘重新加载", "success");
       }
     },
     openFileLocation: () => fs.showInFolder(ws().activePath ?? ""),
@@ -479,7 +485,7 @@ export function installMenuBridge() {
           return ws().openFile(p).catch(() => ui().toast("文档不可用", "info"));
         }
         case "setting.checkUpdates":
-          return ui().toast("已是最新版本", "success");
+          return import("@/bridge/updater").then(({ runCheckForUpdates }) => runCheckForUpdates(true));
         case "welcome.show":
           return window.File.megaMenu.showWelcome();
         default:

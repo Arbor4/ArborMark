@@ -12,6 +12,7 @@ import { FilePanel } from "@/components/files/FilePanel";
 import { OutlinePanel } from "@/components/outline/OutlinePanel";
 import { GlobalSearchModal } from "@/components/GlobalSearchModal";
 import { EditorArea } from "@/components/editor/EditorArea";
+import { stylize } from "@/components/editor/editorCommands";
 import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { QuickOpen } from "@/components/QuickOpen";
 import { ImageLightbox } from "@/components/ImageLightbox";
@@ -100,12 +101,26 @@ export default function App() {
       } else if (mod && e.key === "\\") {
         e.preventDefault();
         ui.toggleChrome();
-      } else if (mod && ["1", "2"].includes(e.key)) {
+      } else if (mod && !e.shiftKey && !e.altKey && ["1", "2", "3", "4", "5", "6"].includes(e.key)) {
+        // ⌘1 ~ ⌘6：对齐 Typora 规范，设为 1 ~ 6 阶标题（绝不与侧边栏按钮冲突）
         e.preventDefault();
-        ui.setPanel((["files", "outline"] as const)[Number(e.key) - 1]);
-      } else if (mod && e.key === "3") {
+        stylize.setHeading(Number(e.key));
+      } else if (mod && !e.shiftKey && !e.altKey && e.key === "0") {
+        // ⌘0：对齐 Typora 规范，重置为普通段落
         e.preventDefault();
-        ui.setGlobalSearch(true);
+        stylize.setParagraph();
+      } else if (mod && e.shiftKey && (e.key === "1" || e.key === "!")) {
+        // ⌘⇧1：对齐 Typora 规范切换大纲面板
+        e.preventDefault();
+        ui.setPanel("outline");
+      } else if (mod && e.shiftKey && (e.key === "2" || e.key === "@" || e.key === "3" || e.key === "#")) {
+        // ⌘⇧2 / ⌘⇧3：对齐 Typora 规范切换文档列表 / 文件树面板
+        e.preventDefault();
+        ui.setPanel("files");
+      } else if (mod && e.shiftKey && (e.key === "l" || e.key === "L")) {
+        // ⌘⇧L：对齐 Typora 规范显示/隐藏侧边栏
+        e.preventDefault();
+        ui.toggleSidebar();
       } else if (mod && e.key === "/") {
         e.preventDefault();
         ui.setEditorMode(ui.editorMode === "edit" ? "source" : "edit");
@@ -213,8 +228,7 @@ export default function App() {
     return () => un?.();
   }, []);
 
-  /* 原生拖放：尚无工作区时，拖入的文件夹/文件直接打开。
-     已有工作区时由 FilePanel 负责导入到当前目录。 */
+  /* 原生拖放：拖入文件夹直接切换工作区；拖入 Markdown 文件直接打开。 */
   useEffect(() => {
     if (!isTauri()) return;
     let un: (() => void) | null = null;
@@ -222,18 +236,32 @@ export default function App() {
       getCurrentWebviewWindow()
         .onDragDropEvent(async (event) => {
           if (event.payload.type !== "drop") return;
+          const { toClientPoint, sidebarElementAt, dragSession } = await import(
+            "@/components/files/dragSession"
+          );
+          const pt = toClientPoint(event.payload.position);
+          // 若拖放到侧边栏，或属于侧边栏内部拖拽移动，由 FilePanel 统一处理，此处不接管全局切换工作区
+          if (
+            sidebarElementAt(pt.x, pt.y) ||
+            dragSession.get() !== null ||
+            dragSession.wasRecentlyInternal(event.payload.paths)
+          ) {
+            return;
+          }
+
           const ws = useWorkspace.getState();
-          if (ws.rootPath) return;
           const first = event.payload.paths[0];
           if (!first) return;
           const st = await fs.stat(first).catch(() => null);
           if (!st?.exists) return;
           if (st.isDir) {
             await ws.openFolder(first).catch(() => {});
-          } else {
+          } else if (pathUtil.isMarkdown(first) || first.endsWith(".txt")) {
+            await ws.openPath(first).catch(() => {});
+          } else if (!ws.rootPath) {
             const dir = pathUtil.parent(first);
             await ws.openFolder(dir).catch(() => {});
-            await useWorkspace.getState().openFile(first).catch(() => {});
+            await ws.openFile(first).catch(() => {});
           }
         })
         .then((u) => (un = u));

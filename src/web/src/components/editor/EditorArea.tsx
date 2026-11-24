@@ -34,17 +34,8 @@ import {
 } from "lucide-react";
 import { getEditorView } from "./EditorHost";
 import { toolbar } from "./toolbarCommands";
-import { useEditorContextMenu } from "../EditorContextMenu";
+import { useEditorContextMenu, formatShortcut } from "../EditorContextMenu";
 import { useLang } from "@/bridge/i18n";
-
-/** 快捷键提示：Windows 显示 Ctrl+…，mac 显示 ⌘…（Shift 在 mac 上是 ⇧）。 */
-const isWinUA = typeof navigator !== "undefined" && /Windows NT/.test(navigator.userAgent);
-const kbd = (combo: string): string => {
-  const parts = combo.split("+");
-  return isWinUA
-    ? `Ctrl+${combo}`
-    : `⌘${parts.map((p) => (p === "Shift" ? "⇧" : p)).join("")}`;
-};
 
 /** 编辑区：工具栏 + 编辑（即时渲染）/ 源码双态。 */
 export function EditorArea() {
@@ -107,23 +98,23 @@ export function EditorArea() {
       {/* 悬浮工具栏：只放工具按钮（保存走 Ctrl+S/菜单/自动保存）；窄窗口自动换行、始终居中 */}
       {toolbarVisible && !isCodeFile && !previewKind && (
       <div className="am-no-print am-glass absolute bottom-[44px] left-1/2 z-30 flex max-w-[calc(100%-20px)] -translate-x-1/2 flex-wrap items-center justify-center gap-x-0.5 gap-y-0.5 rounded-xl border border-line bg-elevated/95 px-1.5 py-1 shadow-menu backdrop-blur-md">
-        {tool(`${t("toolbar.bold")} ${kbd("B")}`, <Bold size={14} />, () => toolbar.bold())}
-        {tool(`${t("toolbar.italic")} ${kbd("I")}`, <Italic size={14} />, () => toolbar.italic())}
-        {tool(`${t("toolbar.strike")} ${kbd("Shift+X")}`, <Strikethrough size={14} />, () => toolbar.strikethrough())}
-        {tool(`${t("toolbar.inlineCode")} ${kbd("E")}`, <Code2 size={14} />, () => toolbar.inlineCode())}
+        {tool(`${t("toolbar.bold")} ${formatShortcut("B")}`, <Bold size={14} />, () => toolbar.bold())}
+        {tool(`${t("toolbar.italic")} ${formatShortcut("I")}`, <Italic size={14} />, () => toolbar.italic())}
+        {tool(`${t("toolbar.strike")} ${formatShortcut("Shift+X")}`, <Strikethrough size={14} />, () => toolbar.strikethrough())}
+        {tool(`${t("toolbar.inlineCode")} ${formatShortcut("E")}`, <Code2 size={14} />, () => toolbar.inlineCode())}
         {sep}
-        {tool(t("toolbar.h1"), <Heading1 size={14} />, () => toolbar.heading(1))}
-        {tool(t("toolbar.h2"), <Heading2 size={14} />, () => toolbar.heading(2))}
-        {tool(t("toolbar.quote"), <Quote size={14} />, () => toolbar.quote())}
+        {tool(`${t("toolbar.h1")} ${formatShortcut("1")}`, <Heading1 size={14} />, () => toolbar.heading(1))}
+        {tool(`${t("toolbar.h2")} ${formatShortcut("2")}`, <Heading2 size={14} />, () => toolbar.heading(2))}
+        {tool(`${t("toolbar.quote")} ${formatShortcut("Alt+Q")}`, <Quote size={14} />, () => toolbar.quote())}
         {sep}
-        {tool(t("toolbar.ul"), <List size={14} />, () => toolbar.bulletList())}
-        {tool(t("toolbar.ol"), <ListOrdered size={14} />, () => toolbar.orderedList())}
-        {tool(t("toolbar.task"), <ListTodo size={14} />, () => toolbar.taskList())}
+        {tool(`${t("toolbar.ul")} ${formatShortcut("Alt+U")}`, <List size={14} />, () => toolbar.bulletList())}
+        {tool(`${t("toolbar.ol")} ${formatShortcut("Alt+O")}`, <ListOrdered size={14} />, () => toolbar.orderedList())}
+        {tool(`${t("toolbar.task")} ${formatShortcut("Shift+X")}`, <ListTodo size={14} />, () => toolbar.taskList())}
         {sep}
-        {tool(t("toolbar.link"), <Link2 size={14} />, () => toolbar.link())}
-        {tool(t("toolbar.image"), <ImagePlus size={14} />, () => setImgOpen(true))}
+        {tool(`${t("toolbar.link")} ${formatShortcut("K")}`, <Link2 size={14} />, () => toolbar.link())}
+        {tool(`${t("toolbar.image")} ${formatShortcut("Shift+I")}`, <ImagePlus size={14} />, () => setImgOpen(true))}
         <span className="relative shrink-0">
-          {tool(t("toolbar.table"), <Table2 size={14} />, () => setPickerOpen((o) => !o), pickerOpen)}
+          {tool(`${t("toolbar.table")} ${formatShortcut("Alt+T")}`, <Table2 size={14} />, () => setPickerOpen((o) => !o), pickerOpen)}
           {pickerOpen && (
             <TablePicker
               onPick={(r, c) => {
@@ -135,11 +126,11 @@ export function EditorArea() {
           )}
         </span>
         {tool(t("toolbar.hr"), <Minus size={14} />, () => toolbar.hr())}
-        {tool(t("toolbar.codeblock"), <Code2 size={14} />, () => toolbar.codeBlock())}
+        {tool(`${t("toolbar.codeblock")} ${formatShortcut("Alt+C")}`, <Code2 size={14} />, () => toolbar.codeBlock())}
         {sep}
         {mode === "source" && tool(t("行号"), <Hash size={14} />, toggleLineNumbers, lineNumbers)}
         {tool(t("toolbar.typewriter"), <AlignVerticalSpaceAround size={14} />, toggleTypewriter, typewriter)}
-        {tool(`${t("toolbar.focus")} ${kbd("Shift+D")}`, <Focus size={14} />, toggleFocus, focusMode)}
+        {tool(`${t("toolbar.focus")} ${formatShortcut("Shift+D")}`, <Focus size={14} />, toggleFocus, focusMode)}
       </div>
       )}
 

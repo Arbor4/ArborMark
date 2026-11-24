@@ -12,6 +12,31 @@ import { readConfig, enabledEngines, openSearch } from "@/bridge/webSearch";
 import { useUi } from "@/stores/ui";
 import { useLang } from "@/bridge/i18n";
 
+const isMac = typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent);
+
+/** 跨平台快捷键展示格式化：macOS 显示 ⌘/⌥/⇧，Windows 显示 Ctrl/Alt/Shift */
+export function formatShortcut(combo: string): string {
+  const parts = combo.split("+");
+  if (isMac) {
+    const hasAlt = parts.includes("Alt") || parts.includes("Option");
+    const hasShift = parts.includes("Shift");
+    const hasCtrl = parts.includes("Ctrl") || parts.includes("Control");
+    const main = parts.filter((p) => !["Ctrl", "Control", "Alt", "Option", "Shift", "Cmd", "Command"].includes(p)).join("");
+    let mod = "";
+    if (hasCtrl) mod += "⌃";
+    if (hasAlt) mod += "⌥";
+    mod += "⌘";
+    if (hasShift) mod += "⇧";
+    return mod + main;
+  } else {
+    const prefix: string[] = ["Ctrl"];
+    if (parts.includes("Alt") || parts.includes("Option")) prefix.push("Alt");
+    if (parts.includes("Shift")) prefix.push("Shift");
+    const main = parts.filter((p) => !["Ctrl", "Control", "Alt", "Option", "Shift", "Cmd", "Command"].includes(p)).join("+");
+    return prefix.join("+") + (main ? `+${main}` : "");
+  }
+}
+
 /** 编辑区右键菜单：经典分组，可折叠（段落 / 格式 / 插入 / 复制为）。 */
 export function useEditorContextMenu() {
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -26,20 +51,20 @@ export function useEditorContextMenu() {
     if (pos) useUi.getState().setTablePickerPos({ x: pos.x, y: pos.y });
   };
 
-  // 常用动作：图标网格 2 行 × 6 列
+  // 常用动作：图标网格 2 行 × 6 列（每个动作悬停均显示快捷键提示）
   const grid: MenuItem[] = [
-    { id: "g-cut", label: t("ctx.cut"), shortcut: "⌘X", icon: <Scissors size={15} />, run: () => document.execCommand("cut") },
-    { id: "g-copy", label: t("ctx.copy"), shortcut: "⌘C", icon: <Copy size={15} />, run: () => document.execCommand("copy") },
-    { id: "g-paste", label: t("ctx.paste"), shortcut: "⌘V", icon: <ClipboardPaste size={15} />, run: () => document.execCommand("paste") },
-    { id: "g-bold", label: t("toolbar.bold"), shortcut: "⌘B", icon: <Bold size={15} />, run: () => toolbar.bold() },
-    { id: "g-italic", label: t("toolbar.italic"), shortcut: "⌘I", icon: <Italic size={15} />, run: () => toolbar.italic() },
-    { id: "g-strike", label: t("toolbar.strike"), shortcut: "⌘⇧X", icon: <Strikethrough size={15} />, run: () => toolbar.strikethrough() },
-    { id: "g-code", label: t("toolbar.inlineCode"), shortcut: "⌘E", icon: <Code2 size={15} />, run: () => toolbar.inlineCode() },
-    { id: "g-quote", label: t("toolbar.quote"), icon: <Quote size={15} />, run: () => toolbar.quote() },
-    { id: "g-codeblock", label: t("toolbar.codeblock"), icon: <FileCode2 size={15} />, run: () => toolbar.codeBlock() },
-    { id: "g-link", label: t("toolbar.link"), icon: <Link2 size={15} />, run: () => toolbar.link() },
-    { id: "g-image", label: t("toolbar.image"), icon: <ImagePlus size={15} />, run: () => toolbar.blankImage() },
-    { id: "g-table", label: t("toolbar.table"), icon: <Table2 size={15} />, run: openTablePicker },
+    { id: "g-cut", label: t("ctx.cut"), shortcut: formatShortcut("X"), icon: <Scissors size={15} />, run: () => document.execCommand("cut") },
+    { id: "g-copy", label: t("ctx.copy"), shortcut: formatShortcut("C"), icon: <Copy size={15} />, run: () => document.execCommand("copy") },
+    { id: "g-paste", label: t("ctx.paste"), shortcut: formatShortcut("V"), icon: <ClipboardPaste size={15} />, run: () => document.execCommand("paste") },
+    { id: "g-bold", label: t("toolbar.bold"), shortcut: formatShortcut("B"), icon: <Bold size={15} />, run: () => toolbar.bold() },
+    { id: "g-italic", label: t("toolbar.italic"), shortcut: formatShortcut("I"), icon: <Italic size={15} />, run: () => toolbar.italic() },
+    { id: "g-strike", label: t("toolbar.strike"), shortcut: formatShortcut("Shift+X"), icon: <Strikethrough size={15} />, run: () => toolbar.strikethrough() },
+    { id: "g-code", label: t("toolbar.inlineCode"), shortcut: formatShortcut("E"), icon: <Code2 size={15} />, run: () => toolbar.inlineCode() },
+    { id: "g-quote", label: t("toolbar.quote"), shortcut: formatShortcut("Alt+Q"), icon: <Quote size={15} />, run: () => toolbar.quote() },
+    { id: "g-codeblock", label: t("toolbar.codeblock"), shortcut: formatShortcut("Alt+C"), icon: <FileCode2 size={15} />, run: () => toolbar.codeBlock() },
+    { id: "g-link", label: t("toolbar.link"), shortcut: formatShortcut("K"), icon: <Link2 size={15} />, run: () => toolbar.link() },
+    { id: "g-image", label: t("toolbar.image"), shortcut: formatShortcut("Shift+I"), icon: <ImagePlus size={15} />, run: () => toolbar.blankImage() },
+    { id: "g-table", label: t("toolbar.table"), shortcut: formatShortcut("Alt+T"), icon: <Table2 size={15} />, run: openTablePicker },
   ];
 
   const wsCfg = readConfig();
@@ -67,25 +92,25 @@ export function useEditorContextMenu() {
     {
       id: "para", label: t("ctx.paragraph"), icon: <Pilcrow size={13} />,
       children: [
-        { id: "p", label: t("ctx.body"), icon: <Type size={13} />, run: () => toolbar.paragraph() },
-        { id: "h1", label: t("toolbar.h1"), icon: <Heading1 size={13} />, run: () => toolbar.heading(1) },
-        { id: "h2", label: t("toolbar.h2"), icon: <Heading2 size={13} />, run: () => toolbar.heading(2) },
-        { id: "h3", label: t("toolbar.h3"), icon: <Heading3 size={13} />, run: () => toolbar.heading(3) },
-        { id: "h4", label: t("toolbar.h4"), icon: <Heading4 size={13} />, run: () => toolbar.heading(4) },
+        { id: "p", label: t("ctx.body"), shortcut: formatShortcut("0"), icon: <Type size={13} />, run: () => toolbar.paragraph() },
+        { id: "h1", label: t("toolbar.h1"), shortcut: formatShortcut("1"), icon: <Heading1 size={13} />, run: () => toolbar.heading(1) },
+        { id: "h2", label: t("toolbar.h2"), shortcut: formatShortcut("2"), icon: <Heading2 size={13} />, run: () => toolbar.heading(2) },
+        { id: "h3", label: t("toolbar.h3"), shortcut: formatShortcut("3"), icon: <Heading3 size={13} />, run: () => toolbar.heading(3) },
+        { id: "h4", label: t("toolbar.h4"), shortcut: formatShortcut("4"), icon: <Heading4 size={13} />, run: () => toolbar.heading(4) },
         { id: "sep-p", label: "", separator: true },
-        { id: "ul", label: t("toolbar.ul"), icon: <List size={13} />, run: () => toolbar.bulletList() },
-        { id: "ol", label: t("toolbar.ol"), icon: <ListOrdered size={13} />, run: () => toolbar.orderedList() },
-        { id: "task", label: t("toolbar.task"), icon: <ListTodo size={13} />, run: () => toolbar.taskList() },
+        { id: "ul", label: t("toolbar.ul"), shortcut: formatShortcut("Alt+U"), icon: <List size={13} />, run: () => toolbar.bulletList() },
+        { id: "ol", label: t("toolbar.ol"), shortcut: formatShortcut("Alt+O"), icon: <ListOrdered size={13} />, run: () => toolbar.orderedList() },
+        { id: "task", label: t("toolbar.task"), shortcut: formatShortcut("Shift+X"), icon: <ListTodo size={13} />, run: () => toolbar.taskList() },
       ],
     },
     {
       id: "insert", label: t("ctx.insert"), icon: <ImagePlus size={13} />,
       children: [
-        { id: "link", label: t("toolbar.link"), icon: <Link2 size={13} />, run: () => toolbar.link() },
-        { id: "image", label: t("toolbar.image"), icon: <ImagePlus size={13} />, run: () => toolbar.blankImage() },
-        { id: "table", label: t("toolbar.table"), icon: <Table2 size={13} />, run: openTablePicker },
-        { id: "codeblock", label: t("toolbar.codeblock"), icon: <FileCode2 size={13} />, run: () => toolbar.codeBlock() },
-        { id: "mathblock", label: t("ctx.mathBlock"), icon: <Sigma size={13} />, run: () => toolbar.mathBlock() },
+        { id: "link", label: t("toolbar.link"), shortcut: formatShortcut("K"), icon: <Link2 size={13} />, run: () => toolbar.link() },
+        { id: "image", label: t("toolbar.image"), shortcut: formatShortcut("Shift+I"), icon: <ImagePlus size={13} />, run: () => toolbar.blankImage() },
+        { id: "table", label: t("toolbar.table"), shortcut: formatShortcut("Alt+T"), icon: <Table2 size={13} />, run: openTablePicker },
+        { id: "codeblock", label: t("toolbar.codeblock"), shortcut: formatShortcut("Alt+C"), icon: <FileCode2 size={13} />, run: () => toolbar.codeBlock() },
+        { id: "mathblock", label: t("ctx.mathBlock"), shortcut: formatShortcut("Alt+B"), icon: <Sigma size={13} />, run: () => toolbar.mathBlock() },
         { id: "diagram", label: t("ctx.diagram"), icon: <Workflow size={13} />, run: () => toolbar.diagram() },
         { id: "hr", label: t("toolbar.hr"), icon: <Minus size={13} />, run: () => toolbar.hr() },
       ],
@@ -93,9 +118,9 @@ export function useEditorContextMenu() {
     { id: "sep3", label: "", separator: true },
     ...searchGroup,
     ...(searchGroup.length ? [{ id: "sep-ws", label: "", separator: true } as MenuItem] : []),
-    { id: "selectall", label: t("ctx.selectAll"), icon: <Type size={13} />, shortcut: "⌘A", run: () => document.execCommand("selectAll") },
+    { id: "selectall", label: t("ctx.selectAll"), shortcut: formatShortcut("A"), icon: <Type size={13} />, run: () => document.execCommand("selectAll") },
     {
-      id: "source", label: t("ctx.toggleSource"), icon: <CheckSquare size={13} />,
+      id: "source", label: t("ctx.toggleSource"), shortcut: formatShortcut("/"), icon: <CheckSquare size={13} />,
       run: () => {
         const ui = useUi.getState();
         ui.setEditorMode(ui.editorMode === "source" ? "edit" : "source");

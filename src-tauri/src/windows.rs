@@ -101,6 +101,7 @@ pub fn build(app: &AppHandle, label: &str) -> tauri::Result<WebviewWindow> {
     // 允许把窗口拖得比屏幕更宽（多显示器横跨 / 超宽屏）。
     crate::window_bounds::allow_resize_beyond_screen(&window);
     if let Some(state) = app.try_state::<crate::state::AppState>() {
+        state.set_last_focused_window(label);
         let dark = state.get("isDarkMode").as_bool().unwrap_or(false)
             || state
                 .get("themeMode")
@@ -175,11 +176,19 @@ pub fn build(app: &AppHandle, label: &str) -> tauri::Result<WebviewWindow> {
                     }
                 }
             }
+            tauri::WindowEvent::Focused(focused) => {
+                if *focused {
+                    if let Some(state) = handle.try_state::<crate::state::AppState>() {
+                        state.set_last_focused_window(&window_label);
+                    }
+                }
+            }
             tauri::WindowEvent::Destroyed => {
                 if let Some(state) = handle.try_state::<crate::state::AppState>() {
                     state.set_target_file(&window_label, None);
                     state.set_close_allowed(&window_label, false);
                     state.reset_close_flow(&window_label);
+                    state.clear_last_focused_window(&window_label);
                 }
             }
             // 文件被拖到未激活的窗口上时主动激活它：macOS 不会因为拖放自动

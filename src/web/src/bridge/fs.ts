@@ -57,6 +57,9 @@ export const pathUtil = {
     const idx = Math.max(normalized.lastIndexOf("/"), normalized.lastIndexOf("\\"));
     return normalized.slice(idx + 1);
   },
+  basename(path: string): string {
+    return pathUtil.name(path);
+  },
   ext(name: string): string {
     const idx = name.lastIndexOf(".");
     return idx <= 0 ? "" : name.slice(idx + 1).toLowerCase();
@@ -103,6 +106,15 @@ export const fs = {
       ? raw
       : ((raw as { folders?: unknown[] })?.folders ?? []);
     return { folders: folders as { path: string; name: string; pinned: boolean }[] };
+  },
+  recentFiles: async () => {
+    try {
+      const raw = await invoke<any>("setting.getRecentFiles");
+      const files = Array.isArray(raw?.files) ? raw.files : [];
+      return { files: files as { path: string; name: string; pinned: boolean }[] };
+    } catch {
+      return { files: [] };
+    }
   },
   addRecentFolder: (path: string) => invoke<boolean>("setting.addRecentFolder", { path }),
   clearRecentHistory: async () => {

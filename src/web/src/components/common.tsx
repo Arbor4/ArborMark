@@ -166,6 +166,7 @@ export function ContextMenu({
         <button
           key={item.id}
           role="menuitem"
+          title={item.shortcut ? `${item.label}  ${item.shortcut}` : item.label}
           disabled={item.disabled}
           className={rowCls(item)}
           onClick={() => {
@@ -176,7 +177,7 @@ export function ContextMenu({
         >
           <span className="flex w-4 justify-center opacity-75">{item.icon}</span>
           <span className="flex-1">{item.label}</span>
-          {item.shortcut && <span className="text-[10.5px] text-ink-muted">{item.shortcut}</span>}
+          {item.shortcut && <span className="ml-3 font-mono text-[10.5px] text-ink-muted">{item.shortcut}</span>}
         </button>
       );
     });

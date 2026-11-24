@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { X, Palette, PenLine, Info, Keyboard, Minus, Plus, TreePine, FileText, Settings2, Image as ImageIcon, Download, Upload, Sparkles, Globe, Trash2, Compass, CircleHelp, FolderOpen, FileDown, RotateCcw } from "lucide-react";
+import { X, Palette, PenLine, Info, Keyboard, Minus, Plus, TreePine, FileText, Settings2, Image as ImageIcon, Download, Upload, Sparkles, Globe, Trash2, Compass, CircleHelp, FolderOpen, FileDown, RotateCcw, RefreshCw } from "lucide-react";
 import { useUi, EDITOR_WIDTHS } from "@/stores/ui";
 import { useWorkspace, setAutoSave as setWorkspaceAutoSave, setFinalNewline } from "@/stores/workspace";
 import { exportSettings, pickAndImportSettings } from "@/bridge/settingsTransfer";
@@ -196,7 +196,7 @@ function AppearanceSettings() {
             <Select
               value={editorWidth}
               onChange={(v) => setEditorWidth(v as keyof typeof EDITOR_WIDTHS)}
-              ariaLabel="编辑区宽度"
+              ariaLabel={t("编辑区宽度")}
               options={[
                 ["standard", "标准 · 860px"],
                 ["wide", "宽 · 1040px"],
@@ -222,7 +222,7 @@ function AppearanceSettings() {
             <Select
               value={String(prefs.wordsPerMinute ?? 300)}
               onChange={(v) => setPref("wordsPerMinute", Number(v))}
-              ariaLabel="阅读速度"
+              ariaLabel={t("阅读速度")}
               options={[
                 ["200", "200 词/分钟 (精读)"],
                 ["300", "300 词/分钟 (标准)"],
@@ -282,7 +282,7 @@ function FileSettings() {
             <Select
               value={String(prefs.defaultFileExt ?? "md")}
               onChange={(v) => setPref("defaultFileExt", v)}
-              ariaLabel="默认扩展名"
+              ariaLabel={t("默认扩展名")}
               options={[
                 ["md", "Markdown (.md)"],
                 ["markdown", "Markdown (.markdown)"],
@@ -298,7 +298,7 @@ function FileSettings() {
             <Select
               value={String(prefs.defaultEol ?? "lf")}
               onChange={(v) => setPref("defaultEol", v)}
-              ariaLabel="默认换行符"
+              ariaLabel={t("默认换行符")}
               options={[
                 ["lf", "LF (Unix / macOS)"],
                 ["crlf", "CRLF (Windows Style)"],
@@ -368,7 +368,7 @@ function EditorSettings() {
             <Select
               value={String(prefs.indentSize ?? 2)}
               onChange={(v) => setPref("indentSize", Number(v))}
-              ariaLabel="缩进宽度"
+              ariaLabel={t("缩进宽度")}
               options={[["2", "2 空格"], ["4", "4 空格"]]}
             />
           }
@@ -376,9 +376,7 @@ function EditorSettings() {
       </Section>
       <Section title={t("渲染引擎")}>
         <p className="rounded-md bg-hover px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-secondary">
-          编辑态采用 Milkdown（ProseMirror）所见即所得引擎：直接在渲染结果上编辑标题、
-          引用、列表、表格（增删行列）、代码块、公式与 Mermaid 图表。源码态为纯文本
-          CodeMirror，⌘/ 在两者间切换。
+          {t("编辑态采用 Milkdown（ProseMirror）所见即所得引擎：直接在渲染结果上编辑标题、引用、列表、表格（增删行列）、代码块、公式与 Mermaid 图表。源码态为纯文本 CodeMirror，⌘/ 在两者间切换。")}
         </p>
       </Section>
     </div>
@@ -404,7 +402,7 @@ function MarkdownSettings() {
             <Select
               value={String(prefs.unorderedListMarker ?? "-")}
               onChange={(v) => setPref("unorderedListMarker", v)}
-              ariaLabel="无序列表标记"
+              ariaLabel={t("无序列表标记")}
               options={[
                 ["-", "- (减号，推荐)"],
                 ["*", "* (星号)"],
@@ -420,7 +418,7 @@ function MarkdownSettings() {
             <Select
               value={String(prefs.defaultCodeLang ?? "")}
               onChange={(v) => setPref("defaultCodeLang", v)}
-              ariaLabel="默认代码块语言"
+              ariaLabel={t("默认代码块语言")}
               options={[
                 ["", t("无默认语言（纯文本）")],
                 ["markdown", "Markdown"],
@@ -545,8 +543,7 @@ function ImageSettings() {
         </div>
         {showHelp && (
           <p className="mb-2 rounded-md bg-accent-soft px-3 py-2 text-[11px] leading-relaxed text-accent">
-            插入图片时按所选动作复制/引用；「应用规则」分别控制本地与网络图片。
-            语法偏好决定生成 Markdown 的路径形态（相对/绝对、./ 前缀、URL 转义）。
+            {t("插入图片时按所选动作复制/引用；「应用规则」分别控制本地与网络图片。语法偏好决定生成 Markdown 的路径形态（相对/绝对、./ 前缀、URL 转义）。")}
           </p>
         )}
       </Section>
@@ -558,8 +555,8 @@ function ImageSettings() {
             <Select
               value={String(prefs.imgBase ?? "doc")}
               onChange={(v) => setPref("imgBase", v)}
-              ariaLabel="相对路径基准"
-              options={[["doc", "当前文档目录"], ["workspace", "工作区根目录"]]}
+              ariaLabel={t("相对路径基准")}
+              options={[["doc", t("当前文档目录")], ["workspace", t("工作区根目录")]]}
             />
           }
         />
@@ -570,8 +567,8 @@ function ImageSettings() {
             <Select
               value={String(prefs.imgNamePattern ?? "original")}
               onChange={(v) => setPref("imgNamePattern", v)}
-              ariaLabel="文件名模板"
-              options={[["original", "保留原文件名"], ["timestamp", "时间戳"], ["docseq", "文档名-序号"]]}
+              ariaLabel={t("文件名模板")}
+              options={[["original", t("保留原文件名")], ["timestamp", t("时间戳")], ["docseq", t("文档名-序号")]]}
             />
           }
         />
@@ -583,9 +580,7 @@ function ImageSettings() {
       </Section>
       <Section title={t("说明")}>
         <p className="rounded-md bg-hover px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-secondary">
-          拖拽或粘贴图片到编辑区、或经菜单「插入本地图片」时，按以上偏好落盘并生成路径。
-          浏览器环境粘贴回退为自包含 data URI；桌面端复制真实文件到附件目录。
-          点击图片可放大查看；导出 PDF/HTML 时相对路径按设置保留或转换。
+          {t("拖拽或粘贴图片到编辑区、或经菜单「插入本地图片」时，按以上偏好落盘并生成路径。浏览器环境粘贴回退为自包含 data URI；桌面端复制真实文件到附件目录。点击图片可放大查看；导出 PDF/HTML 时相对路径按设置保留或转换。")}
         </p>
       </Section>
     </div>
@@ -737,7 +732,7 @@ function GeneralSettings() {
                   invoke("setting.set", { userLanguage: v === "system" ? "" : v }).catch(() => {});
                 });
               }}
-              ariaLabel="界面语言"
+              ariaLabel={t("界面语言")}
               options={[
                 ["system", t("跟随系统")],
                 ["zh-Hans", "简体中文"],
@@ -760,6 +755,21 @@ function GeneralSettings() {
           }
         />
         <Row label={t("自动检查更新")} control={<Switch checked={bool("autoCheckUpdate")} label={t("自动检查更新")} onChange={(v) => setPref("autoCheckUpdate", v)} />} />
+        <Row
+          label={t("检查更新")}
+          hint={`${t("当前版本")} v4.0.1`}
+          control={
+            <button
+              onClick={() => {
+                import("@/bridge/updater").then(({ runCheckForUpdates }) => runCheckForUpdates(true));
+              }}
+              className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+            >
+              <RefreshCw size={12} />
+              {t("立即检查")}
+            </button>
+          }
+        />
       </Section>
       <Section title={t("会话与文件树")}>
         <Row label={t("启动时恢复上次会话")} hint={t("重新打开上次的文件夹与文档")} control={<Switch checked={bool("restoreSession")} label={t("恢复会话")} onChange={(v) => setPref("restoreSession", v)} />} />
@@ -774,8 +784,8 @@ function GeneralSettings() {
               onClick={async () => {
                 const r = await exportSettings();
                 const ui = useUi.getState();
-                if (r.status === "saved") ui.toast("设置已导出", "success");
-                else if (r.status === "error") ui.toast(`导出失败：${r.error ?? "未知错误"}`, "danger");
+                if (r.status === "saved") ui.toast(t("设置已导出"), "success");
+                else if (r.status === "error") ui.toast(`${t("导出失败")}：${r.error ?? "未知错误"}`, "danger");
               }}
               className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
             >
@@ -791,8 +801,8 @@ function GeneralSettings() {
               onClick={async () => {
                 const r = await pickAndImportSettings();
                 const ui = useUi.getState();
-                if (r.status === "imported") ui.toast("设置已导入并应用", "success");
-                else if (r.status === "error") ui.toast(`导入失败：${r.error ?? "文件格式无效"}`, "danger");
+                if (r.status === "imported") ui.toast(t("设置已导入并应用"), "success");
+                else if (r.status === "error") ui.toast(`${t("导入失败")}：${r.error ?? "文件格式无效"}`, "danger");
               }}
               className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
             >
@@ -808,9 +818,9 @@ function GeneralSettings() {
           control={
             <button
               onClick={() => {
-                if (window.confirm("确定要恢复默认偏好设置吗？")) {
+                if (window.confirm(t("确定要恢复默认偏好设置吗？"))) {
                   resetPrefs();
-                  useUi.getState().toast("已恢复默认偏好设置", "success");
+                  useUi.getState().toast(t("已恢复默认偏好设置"), "success");
                 }
               }}
               className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
@@ -827,7 +837,7 @@ function GeneralSettings() {
               onClick={() => {
                 try {
                   localStorage.removeItem("arbor.dismissed_dialogs");
-                  useUi.getState().toast("已重置所有警告提示", "success");
+                  useUi.getState().toast(t("已重置所有警告提示"), "success");
                 } catch {
                   /* ignore */
                 }
@@ -845,6 +855,7 @@ function GeneralSettings() {
 
 function ShortcutSettings() {
   const { t } = useLang();
+  const isMac = typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent);
   const groups: { title: string; items: [string, string][] }[] = [
     {
       title: t("文件"),
@@ -857,13 +868,20 @@ function ShortcutSettings() {
       ],
     },
     {
+      title: t("段落与标题"),
+      items: [
+        ["一阶 ~ 六阶标题", isMac ? "⌘1 ~ ⌘6" : "Ctrl+1 ~ 6"],
+        ["普通段落", isMac ? "⌘0" : "Ctrl+0"],
+      ],
+    },
+    {
       title: t("视图"),
       items: [
-        ["文件 / 大纲 / 搜索面板", "⌘1 / 2 / ⌘3"],
-        ["收起 / 展开侧边栏", "⌘\\"],
-        ["编辑 / 源码", "⌘/"],
-        ["专注模式", "⌘⇧D"],
-        ["偏好设置", "⌘,"],
+        ["文件 / 大纲面板", isMac ? "⌘⇧2 / ⌘⇧1" : "Ctrl+Shift+2 / 1"],
+        ["收起 / 展开侧边栏", isMac ? "⌘\\ / ⌘⇧L" : "Ctrl+\\ / Ctrl+Shift+L"],
+        ["编辑 / 源码", isMac ? "⌘/" : "Ctrl+/"],
+        ["专注模式", isMac ? "⌘⇧D" : "Ctrl+Shift+D"],
+        ["偏好设置", isMac ? "⌘," : "Ctrl+,"],
       ],
     },
     {

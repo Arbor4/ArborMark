@@ -43,25 +43,36 @@ export const dragSession = {
 /* ── 原生坐标 → 视口 CSS Client 坐标 ─────────────────────────────────────── */
 
 /**
- * 获取系统标题栏高度。浏览器环境按 outer/inner 高度差估算。
+ * 获取系统标题栏高度。
+ * macOS 下原生窗口带有系统标题栏（高度通常为 28px）；
+ * 在全屏模式下 macOS 标题栏自动隐藏，高度为 0。
  */
 export function getTitleBarHeight(): number {
-  if (typeof window === "undefined") return 0;
+  if (typeof window === "undefined" || !isMacUA) return 0;
+  // 全屏模式下 macOS 自动隐藏标题栏，客户区直顶屏幕顶部，无标题栏偏移
+  if (
+    document.fullscreenElement ||
+    (window.innerHeight > 0 && window.innerHeight >= screen.height)
+  ) {
+    return 0;
+  }
   const diff = window.outerHeight - window.innerHeight;
   if (diff > 0 && diff < 120) return diff;
-  return isMacUA ? 28 : 0;
+  return 28;
 }
 
 /**
  * 将 Tauri 原生 onDragDropEvent 坐标转换为 DOM client 视口坐标：
- * - macOS: 原生上报的 position 1:1 对齐客户区视口；
+ * - macOS: 原生上报的 position.y 基于全窗口坐标（含顶部系统标题栏 28px 偏移），
+ *   需扣减标题栏高度以精确对齐 DOM client 视口坐标，彻底杜绝高亮目标下移一行的偏移偏差；
  * - Windows / Linux: 原生上报的是物理像素（PhysicalPosition），需除以 devicePixelRatio 转换为逻辑像素。
  */
 export function toClientPoint(p: { x: number; y: number }): { x: number; y: number } {
   if (isMacUA) {
+    const titleBarH = getTitleBarHeight();
     return {
       x: Math.max(0, p.x),
-      y: Math.max(0, p.y),
+      y: Math.max(0, p.y - titleBarH),
     };
   }
   const dpr = window.devicePixelRatio || 1;

@@ -29,9 +29,11 @@ import { shouldSuppressClick } from "./files/dragSession";
 
 /* ── 活动栏：左侧图标导航（文件 / 大纲 / 搜索 / 设置） ─────────────────────── */
 
+const isMac = typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent);
+
 const ACTIVITY_ITEMS: { id: PanelId; label: string; icon: typeof Files; shortcut: string }[] = [
-  { id: "files", label: "文件", icon: Files, shortcut: "⌘1" },
-  { id: "outline", label: "大纲", icon: ListTree, shortcut: "⌘2" },
+  { id: "files", label: "文件", icon: Files, shortcut: isMac ? "⌘⇧2" : "Ctrl+Shift+2" },
+  { id: "outline", label: "大纲", icon: ListTree, shortcut: isMac ? "⌘⇧1" : "Ctrl+Shift+1" },
 ];
 
 export function ActivityBar() {
@@ -219,7 +221,7 @@ export function PanelHeader({
         {title}
       </h2>
       {actions}
-      <Tooltip label={`${t("收起侧边栏")}  ⌘\\`}>
+      <Tooltip label={`${t("收起侧边栏")}  ${isMac ? "⌘\\ / ⌘⇧L" : "Ctrl+\\ / Ctrl+Shift+L"}`}>
         <button
           aria-label={t("收起侧边栏")}
           onClick={toggleSidebar}

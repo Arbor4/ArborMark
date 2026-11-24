@@ -56,6 +56,8 @@ pub struct AppState {
     allowed_close_windows: Mutex<std::collections::HashSet<String>>,
     /// 正在进行关闭流程检查的窗口（防止重复触发）
     close_flow_running: Mutex<std::collections::HashSet<String>>,
+    /// 最近获得焦点的文档窗口 label（用于顶栏菜单指令在 macOS 失去焦点时精确派发）
+    last_focused_window: Mutex<Option<String>>,
 }
 
 /// 跨窗口同步的一条内容快照。
@@ -203,6 +205,7 @@ impl AppState {
             folder_watchers: Mutex::new(std::collections::HashMap::new()),
             allowed_close_windows: Mutex::new(std::collections::HashSet::new()),
             close_flow_running: Mutex::new(std::collections::HashSet::new()),
+            last_focused_window: Mutex::new(None),
         }
     }
 
@@ -677,6 +680,30 @@ impl AppState {
             .unwrap_or_default()
     }
 
+    /// 记录最近获取焦点的窗口（原生顶栏菜单失焦时的路由目标）
+    pub fn set_last_focused_window(&self, label: &str) {
+        if let Ok(mut lock) = self.last_focused_window.lock() {
+            *lock = Some(label.to_string());
+        }
+    }
+
+    /// 获取最近活跃窗口 label
+    pub fn last_focused_window(&self) -> Option<String> {
+        self.last_focused_window
+            .lock()
+            .ok()
+            .and_then(|lock| lock.clone())
+    }
+
+    /// 窗口销毁时清理活跃记录
+    pub fn clear_last_focused_window(&self, label: &str) {
+        if let Ok(mut lock) = self.last_focused_window.lock() {
+            if lock.as_deref() == Some(label) {
+                *lock = None;
+            }
+        }
+    }
+
     pub fn take_menu_action(&self, id: &str) -> Option<(String, String)> {
         self.menu_actions.lock().ok()?.remove(id)
     }
@@ -976,6 +1003,29 @@ mod tests {
         // 渲染层需要的字段
         assert_eq!(files[0]["name"], json!("c.md"));
         assert_eq!(files[0]["pinned"], json!(false));
+
+        let _ = std::fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn last_focused_window_tracks_and_clears() {
+        let dir = temp_dir();
+        let state = AppState::new(dir.clone());
+        assert_eq!(state.last_focused_window(), None);
+
+        state.set_last_focused_window("main");
+        assert_eq!(state.last_focused_window(), Some("main".to_string()));
+
+        state.set_last_focused_window("doc-1");
+        assert_eq!(state.last_focused_window(), Some("doc-1".to_string()));
+
+        // 清理非当前窗口不影响记录
+        state.clear_last_focused_window("main");
+        assert_eq!(state.last_focused_window(), Some("doc-1".to_string()));
+
+        // 清理当前窗口归为 None
+        state.clear_last_focused_window("doc-1");
+        assert_eq!(state.last_focused_window(), None);
 
         let _ = std::fs::remove_dir_all(dir);
     }

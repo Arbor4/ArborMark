@@ -1717,6 +1717,20 @@ div:has(> .am-milkdown-host) {
   box-shadow: 0 0 0 2px var(--am-accent-soft);
 }
 .am-table-scroll { overflow-x: auto; }
+/* 横向滚动阴影指示（Scroll Affordance Shadow）：内容超出视口时，左右两端自动浮现平滑深度渐变阴影 */
+.am-table-scroll,
+.am-codeblock-view,
+.am-codeblock-edit {
+  background:
+    linear-gradient(to right, var(--am-bg-elevated) 30%, rgba(0, 0, 0, 0)),
+    linear-gradient(to right, rgba(0, 0, 0, 0), var(--am-bg-elevated) 70%) 100% 0,
+    radial-gradient(farthest-side at 0 50%, color-mix(in srgb, var(--am-text) 18%, transparent), transparent),
+    radial-gradient(farthest-side at 100% 50%, color-mix(in srgb, var(--am-text) 18%, transparent), transparent) 100% 0;
+  background-repeat: no-repeat;
+  background-color: var(--am-bg-elevated);
+  background-size: 28px 100%, 28px 100%, 12px 100%, 12px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
 /* 窄视口下表格/代码块内部横向滚动，滚动条沿用主题色 */
 .am-table-scroll::-webkit-scrollbar,
 .am-codeblock-view::-webkit-scrollbar,
@@ -2120,14 +2134,76 @@ input.am-html-editor { display: inline-block; min-width: 120px; }
 .am-milkdown-host.am-focus-mode .ProseMirror > .ProseMirror-selectednode,
 .am-milkdown-host.am-focus-mode .ProseMirror > *:has(.ProseMirror-trailingBreak) { opacity: 1; }
 
-/* ── 打印 ───────────────────────────────────────────────────────────────── */
+/* ── 打印与 PDF 导出（支持长文档完整分页，解决单页截断问题） ─────────── */
 
 @media print {
-  body {
-    overflow: visible;
-    background: #fff;
+  @page {
+    margin: 15mm 20mm;
+    size: auto;
   }
+
+  html,
+  body,
+  #root,
+  [data-layout-root],
+  main,
+  .am-editor-scroll,
+  .am-milkdown-host,
+  .cm-editor,
+  .cm-scroller,
+  .cm-content {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    position: static !important;
+  }
+
+  /* 打印时隐藏全部界面控件，只输出正文内容 */
+  header,
+  aside,
+  footer,
+  nav,
+  [data-titlebar],
+  .am-titlebar,
+  .am-sidebar,
+  .am-toolbar,
+  .am-statusbar,
+  .am-word-count-panel,
+  .am-table-toolbar,
+  .am-table-grips,
   .am-no-print {
     display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #1f2328 !important;
+    font-size: 11pt !important;
+    line-height: 1.6 !important;
+  }
+
+  .am-milkdown-host .ProseMirror,
+  .cm-content {
+    padding: 0 !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* 打印分页保护：标题不落在页末孤行，代码块/表格尽量整块分页 */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  pre, blockquote, table, img, figure, .am-codeblock-view {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: underline !important;
   }
 }

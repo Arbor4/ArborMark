@@ -3,6 +3,7 @@
  * t(key) 供非 React 环境（node view / 命令）读取当前语言；useLang() 供组件订阅。
  */
 import { useUi } from "@/stores/ui";
+import { zhHant, jaJP, koKR, deDE, frFR, esES, ruRU, itIT, ptBR, nlNL, plPL, trTR, arSA } from "./locales";
 
 export type Lang =
   | "system"
@@ -267,34 +268,53 @@ const ZH2EN: Record<string, string> = {
   "已恢复默认偏好设置": "Preferences restored to defaults", "重置全部警告提示对话框": "Reset all warning dialogs",
   "恢复所有被勾选「不再提示」的确认弹窗": "Restore all dismissed confirmation prompts", "重置对话框": "Reset dialogs",
   "已重置所有警告提示": "All warning dialogs reset",
-};
-
-/** 繁体中文映射 */
-const zhHant: Record<string, string> = {
-  ...zh,
-  "文件": "檔案", "偏好设置": "偏好設定", "外观": "外觀", "编辑器": "編輯器", "图片": "圖片", "导出": "匯出", "搜索": "搜尋", "通用": "一般",
-  "快捷键": "快捷鍵", "关于": "關於", "大纲": "大綱", "保存": "儲存", "专注模式": "專注模式", "打字机模式": "打字機模式", "源码模式": "源碼模式",
-  "编辑模式": "編輯模式", "显示行号": "顯示行號", "自动保存": "自動儲存", "主题": "佈景主題", "排版": "排版", "界面": "介面",
-  "界面语言": "介面語言", "复制": "複製", "剪切": "剪下", "粘贴": "貼上", "新建文件": "新增檔案", "新建文件夹": "新增資料夾",
-  "打开文件夹": "開啟資料夾", "清除历史记录": "清除歷史記錄", "恢复默认偏好设置": "還原預設偏好設定",
-};
-
-/** 日文常用词映射 */
-const jaJP: Record<string, string> = {
-  ...en,
-  "settings.title": "環境設定", "settings.appearance": "外観", "settings.file": "ファイル", "settings.editor": "エディタ",
-  "settings.markdown": "Markdown", "settings.image": "画像", "settings.export": "エクスポート", "settings.search": "検索",
-  "settings.general": "一般", "settings.shortcuts": "ショートカット", "settings.about": "情報",
-  "nav.files": "ファイル", "nav.outline": "アウトライン", "nav.search": "検索", "nav.appearance": "外観", "nav.settings": "設定",
-  "panel.files": "ファイル", "panel.outline": "アウトライン", "panel.search": "検索",
-  "toolbar.save": "保存", "find.placeholder": "ファイル内を検索…", "common.copied": "コピー完了", "common.saved": "保存完了",
+  "最近打开": "Recent Folders",
+  "最近": "Recent",
+  "按文件名搜索…（支持最近文件优先）": "Search by filename… (Recent files prioritized)",
+  "文件库为空": "Library is empty",
+  "没有匹配的文件": "No matching files",
+  "检查更新": "Check for updates",
+  "立即检查": "Check now",
+  "当前版本": "Current version",
+  "重新打开上次使用的文件夹与文档": "Reopen the last used folder and document",
+  "编辑态采用 Milkdown（ProseMirror）所见即所得引擎：直接在渲染结果上编辑标题、引用、列表、表格（增删行列）、代码块、公式与 Mermaid 图表。源码态为纯文本 CodeMirror，⌘/ 在两者间切换。":
+    "WYSIWYG editing uses Milkdown (ProseMirror): edit headings, quotes, lists, tables (add/remove rows & cols), code blocks, math and Mermaid directly on rendered content. Source mode is plain CodeMirror; toggle with ⌘/.",
+  "插入图片时按所选动作复制/引用；「应用规则」分别控制本地与网络图片。语法偏好决定生成 Markdown 的路径形态（相对/绝对、./ 前缀、URL 转义）。":
+    "Images are copied or referenced based on the chosen action. Apply rules govern local and web images. Syntax preferences control relative/absolute paths, ./ prefix, and URL escaping.",
+  "拖拽或粘贴图片到编辑区、或经菜单「插入本地图片」时，按以上偏好落盘并生成路径。浏览器环境粘贴回退为自包含 data URI；桌面端复制真实文件到附件目录。点击图片可放大查看；导出 PDF/HTML 时相对路径按设置保留或转换。":
+    "Dragging or pasting images into the editor saves files and generates paths according to preferences. Web fallback uses data URIs; desktop copies files into the assets folder. Click images to zoom; paths are preserved or converted on export.",
+  "自定义引擎需含名称与带 %s 或 {关键词} 的 URL": "Custom engine requires a name and a URL containing %s or {keyword}",
+  "打开所在文件夹": "Open folder",
+  "文件内搜索与替换": "Find & replace in file",
+  "主导航": "Main navigation",
+  "侧边栏": "Sidebar",
+  "调整侧边栏宽度": "Resize sidebar width",
+  "关闭通知": "Dismiss notification",
+  "界面渲染出错": "UI Rendering Error",
+  "重新加载": "Reload",
+  "选择主题文件": "Select theme file",
+  "选择表格尺寸": "Select table dimensions",
+  "确定要恢复默认偏好设置吗？": "Are you sure you want to restore default preferences?",
+  "导出失败": "Export failed",
+  "导入失败": "Import failed",
 };
 
 const dicts: Record<string, Record<string, string>> = {
   "zh-Hans": zh,
-  "zh-Hant": zhHant,
+  "zh-Hant": { ...zh, ...zhHant },
   en,
-  "ja-JP": jaJP,
+  "ja-JP": { ...en, ...jaJP },
+  "ko-KR": { ...en, ...koKR },
+  "de-DE": { ...en, ...deDE },
+  "fr-FR": { ...en, ...frFR },
+  "es-ES": { ...en, ...esES },
+  "ru-RU": { ...en, ...ruRU },
+  "it-IT": { ...en, ...itIT },
+  "pt-BR": { ...en, ...ptBR },
+  "nl-NL": { ...en, ...nlNL },
+  "pl-PL": { ...en, ...plPL },
+  "tr-TR": { ...en, ...trTR },
+  "ar-SA": { ...en, ...arSA },
 };
 
 export function resolveLang(pref?: string): string {
@@ -310,6 +330,10 @@ export function resolveLang(pref?: string): string {
     if (nav.startsWith("ru")) return "ru-RU";
     if (nav.startsWith("it")) return "it-IT";
     if (nav.startsWith("pt")) return "pt-BR";
+    if (nav.startsWith("nl")) return "nl-NL";
+    if (nav.startsWith("pl")) return "pl-PL";
+    if (nav.startsWith("tr")) return "tr-TR";
+    if (nav.startsWith("ar")) return "ar-SA";
     return "en";
   }
   return pref;
@@ -326,10 +350,12 @@ export function t(key: string, vars?: Record<string, string | number>): string {
   let s: string;
   if (dict && dict[key]) {
     s = dict[key];
+  } else if (lang.startsWith("zh-Hant")) {
+    s = dicts["zh-Hant"]?.[key] ?? zh[key] ?? key;
   } else if (lang.startsWith("zh")) {
     s = zh[key] ?? key;
   } else {
-    s = en[key] ?? ZH2EN[key] ?? key;
+    s = dict?.[key] ?? en[key] ?? ZH2EN[key] ?? key;
   }
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
   return s;
@@ -346,10 +372,12 @@ export function useLang() {
       let s: string;
       if (dict && dict[key]) {
         s = dict[key];
+      } else if (lang.startsWith("zh-Hant")) {
+        s = dicts["zh-Hant"]?.[key] ?? zh[key] ?? key;
       } else if (lang.startsWith("zh")) {
         s = zh[key] ?? key;
       } else {
-        s = en[key] ?? ZH2EN[key] ?? key;
+        s = dict?.[key] ?? en[key] ?? ZH2EN[key] ?? key;
       }
       if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
       return s;

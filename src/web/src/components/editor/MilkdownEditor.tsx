@@ -57,6 +57,8 @@ export function MilkdownEditor() {
   const userInteractedRef = useRef(false);
   const lastPath = useRef<string | null>(null);
   const readyRef = useRef(false);
+  const reloadToken = useWorkspace((s) => s.reloadToken);
+  const lastReloadToken = useRef(reloadToken);
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingMarkdownRef = useRef<string | null>(null);
   const isComposingRef = useRef(false);
@@ -375,28 +377,53 @@ export function MilkdownEditor() {
     };
   }, []);
 
-  /* 文件切换 → 重置文档并建立新基线 */
+  /* 文件切换 / 外部重载（从磁盘重载、外部修改感知） → 重置文档并建立新基线 */
   useEffect(() => {
     const editor = editorRef.current;
     if (!editor || !readyRef.current) return;
-    if (activePath !== lastPath.current) {
-      flushPendingSync();
-      // 先更新 lastPath 防止重入：replaceAll 会触发 listener→setBaseline→
-      // zustand 同步重渲染，若 lastPath 未先更新，effect 会再次 replaceAll 形成死循环。
-      lastPath.current = activePath;
-      loadingRef.current = true;
-      userInteractedRef.current = false;
-      editor.action(replaceAll(content || ""));
-      editor.action((ctx) => {
-        const md = ctx.get(serializerCtx)(ctx.get(editorViewCtx).state.doc);
-        useWorkspace.getState().setBaseline(normalizeMarkdown(md));
-      });
-      updateEmptyHint();
-      setTimeout(() => {
-        loadingRef.current = false;
-      }, 300);
+
+    const pathChanged = activePath !== lastPath.current;
+    const reloadTriggered = reloadToken !== lastReloadToken.current;
+
+    if (!pathChanged && !reloadTriggered) return;
+
+    lastPath.current = activePath;
+    lastReloadToken.current = reloadToken;
+
+    // 1. 丢弃任何未入库的微防抖挂起更新，防止冲掉新从磁盘加载的内容
+    if (syncTimerRef.current) {
+      clearTimeout(syncTimerRef.current);
+      syncTimerRef.current = null;
     }
-  }, [activePath, content]);
+    pendingMarkdownRef.current = null;
+
+    // 2. 外部重载时尽量保持滚动位置；切换文件时重置回顶部
+    const scroller = containerRef.current?.parentElement;
+    const prevScrollTop = reloadTriggered && !pathChanged ? scroller?.scrollTop : 0;
+
+    // 3. 置位 loading 与交互标记，避免 replaceAll 触发 listener 被误当成用户打字
+    loadingRef.current = true;
+    userInteractedRef.current = false;
+
+    // 4. 全量替换 ProseMirror 文档为目标内容
+    editor.action(replaceAll(content || ""));
+    editor.action((ctx) => {
+      const md = ctx.get(serializerCtx)(ctx.get(editorViewCtx).state.doc);
+      useWorkspace.getState().setBaseline(normalizeMarkdown(md));
+    });
+    updateEmptyHint();
+
+    if (reloadTriggered && !pathChanged && scroller && prevScrollTop != null && prevScrollTop > 0) {
+      requestAnimationFrame(() => {
+        if (scroller) scroller.scrollTop = prevScrollTop;
+      });
+    }
+
+    const timer = setTimeout(() => {
+      loadingRef.current = false;
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [activePath, content, reloadToken]);
 
   /* 只读模式（含内置帮助文档） */
   useEffect(() => {

@@ -1,12 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Search, CornerDownLeft } from "lucide-react";
+import { FileText, Search, CornerDownLeft, Clock } from "lucide-react";
 import { useWorkspace, flattenVisible, type TreeNode } from "@/stores/workspace";
 import { useUi } from "@/stores/ui";
-import { pathUtil } from "@/bridge/fs";
+import { fs, pathUtil } from "@/bridge/fs";
 import { Modal } from "./common";
 import { useLang } from "@/bridge/i18n";
 
-/** 快速打开：⌘P 模糊搜索文件名。 */
+interface QuickOpenItem {
+  file: TreeNode;
+  score: number;
+  isRecent?: boolean;
+}
+
+/** 快速打开：⌘P 模糊搜索文件名，最近文件置顶优先。 */
 export function QuickOpen() {
   const { t } = useLang();
   const open = useUi((s) => s.quickOpenOpen);
@@ -18,6 +24,7 @@ export function QuickOpen() {
 
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
+  const [recentPaths, setRecentPaths] = useState<string[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -36,13 +43,34 @@ export function QuickOpen() {
     return out;
   }, [tree]);
 
-  const scored = useMemo(() => {
+  const scored = useMemo<QuickOpenItem[]>(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return files.slice(0, 50).map((f) => ({ file: f, score: 0 }));
+    const recentSet = new Set(recentPaths);
+
+    if (!q) {
+      // 搜索框为空时：优先置顶显示最近打开的文件列表
+      const recentItems: QuickOpenItem[] = [];
+      const seen = new Set<string>();
+
+      for (const p of recentPaths) {
+        const found = files.find((f) => f.path === p);
+        if (found && !seen.has(p)) {
+          seen.add(p);
+          recentItems.push({ file: found, score: 1000, isRecent: true });
+        }
+      }
+
+      const otherItems: QuickOpenItem[] = files
+        .filter((f) => !seen.has(f.path))
+        .map((f) => ({ file: f, score: 0 }));
+
+      return [...recentItems, ...otherItems].slice(0, 50);
+    }
+
     return files
       .map((file) => {
         const name = file.name.toLowerCase();
-        const rel = file.path.slice(rootPath.length + 1).toLowerCase();
+        const rel = rootPath ? file.path.slice(rootPath.length + 1).toLowerCase() : file.path.toLowerCase();
         let score = -1;
         if (name.startsWith(q)) score = 100;
         else if (name.includes(q)) score = 70;
@@ -55,17 +83,28 @@ export function QuickOpen() {
           }
           if (qi === q.length) score = 20;
         }
-        return { file, score };
+
+        const isRecent = recentSet.has(file.path);
+        if (score >= 0 && isRecent) {
+          score += 15; // 最近文件赋予搜索提权
+        }
+
+        return { file, score, isRecent };
       })
       .filter((s) => s.score >= 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 50);
-  }, [files, query, rootPath]);
+  }, [files, query, rootPath, recentPaths]);
 
   useEffect(() => {
     if (open) {
       setQuery("");
       setCursor(0);
+      fs.recentFiles()
+        .then((res) => {
+          setRecentPaths((res.files ?? []).map((f) => f.path));
+        })
+        .catch(() => {});
       setTimeout(() => inputRef.current?.focus(), 30);
     }
   }, [open]);
@@ -107,7 +146,7 @@ export function QuickOpen() {
               choose(cursor);
             }
           }}
-          placeholder={t("按文件名搜索…")}
+          placeholder={t("按文件名搜索…（支持最近文件优先）")}
           aria-label={t("快速打开文件")}
           className="h-[46px] min-w-0 flex-1 bg-transparent text-[14px] text-ink outline-none placeholder:text-ink-muted"
         />
@@ -118,10 +157,10 @@ export function QuickOpen() {
       <div ref={listRef} className="max-h-[340px] overflow-y-auto p-1.5">
         {scored.length === 0 ? (
           <p className="px-3 py-6 text-center text-[12.5px] text-ink-muted">
-            {files.length === 0 ? "文件库为空" : "没有匹配的文件"}
+            {files.length === 0 ? t("文件库为空") : t("没有匹配的文件")}
           </p>
         ) : (
-          scored.map(({ file }, i) => (
+          scored.map(({ file, isRecent }, i) => (
             <button
               key={file.path}
               data-index={i}
@@ -131,11 +170,24 @@ export function QuickOpen() {
                 i === cursor ? "bg-accent-soft" : ""
               }`}
             >
-              <FileText size={14} className="shrink-0 text-accent opacity-80" />
+              {isRecent ? (
+                <Clock size={14} className="shrink-0 text-accent opacity-90" />
+              ) : (
+                <FileText size={14} className="shrink-0 text-accent opacity-80" />
+              )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] text-ink">{file.name}</span>
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-[13px] text-ink">{file.name}</span>
+                  {isRecent && (
+                    <span className="rounded bg-accent/10 px-1 py-0.2 text-[9.5px] font-medium text-accent">
+                      {t("最近")}
+                    </span>
+                  )}
+                </span>
                 <span className="block truncate text-[10.5px] text-ink-muted">
-                  {pathUtil.parent(file.path).slice(rootPath.length + 1) || "/"}
+                  {rootPath && file.path.startsWith(rootPath)
+                    ? pathUtil.parent(file.path).slice(rootPath.length + 1) || "/"
+                    : pathUtil.parent(file.path)}
                 </span>
               </span>
               {i === cursor && <CornerDownLeft size={13} className="shrink-0 text-ink-muted" />}

@@ -236,14 +236,27 @@ pub fn run() {
                 return;
             }
 
-            // 2) 业务菜单：命令与窗口无关，作用于当前聚焦窗口
+            // 2) 业务菜单：命令与窗口无关，作用于当前聚焦窗口。
+            // 注意：macOS 下原生顶栏菜单弹出或点击时，Webview 失去焦点，
+            // 直接查 is_focused() 会返回 false；故回退到 AppState 记录的 last_focused_window。
             if let Some(code) = state.menu_command(id) {
                 let focused = app
                     .webview_windows()
                     .into_iter()
                     .find(|(_, window)| window.is_focused().unwrap_or(false))
                     .map(|(_, window)| window)
-                    .or_else(|| app.get_webview_window("main"));
+                    .or_else(|| {
+                        state
+                            .last_focused_window()
+                            .and_then(|label| app.get_webview_window(&label))
+                    })
+                    .or_else(|| app.get_webview_window("main"))
+                    .or_else(|| {
+                        app.webview_windows()
+                            .into_iter()
+                            .next()
+                            .map(|(_, window)| window)
+                    });
                 if let Some(window) = focused {
                     log::debug!("[menu] 执行 {id} -> {}", window.label());
                     let _ = window.eval(&code);

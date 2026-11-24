@@ -590,7 +590,10 @@ export function FilePanel() {
                 toast("新窗口需在桌面端使用", "info");
                 return;
               }
-              invoke("document.newWindow", { filePath: node.path }).catch(() =>
+              invoke("document.newWindow", {
+                filePath: node.path,
+                mountFolder: rootPath || undefined,
+              }).catch(() =>
                 toast("打开新窗口失败", "danger"),
               );
             },
@@ -938,7 +941,7 @@ export function FilePanel() {
         {recentOpen && (
           <div className="am-pop-in absolute left-2 right-2 top-[36px] z-40 max-h-[300px] overflow-auto rounded-lg border border-line bg-elevated p-1 shadow-menu">
             <p className="flex items-center gap-1.5 px-2 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-muted">
-              <History size={11} /> 最近打开
+              <History size={11} /> {t("最近打开")}
             </p>
             {recentFolders.length === 0 && (
               <p className="px-2 py-2 text-[12px] text-ink-muted">{t("暂无记录")}</p>

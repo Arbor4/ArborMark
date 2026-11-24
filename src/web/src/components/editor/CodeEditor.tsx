@@ -134,6 +134,8 @@ export function CodeEditor() {
   const readonlyComp = useRef(new Compartment());
   const applyingExternal = useRef(false);
   const lastPath = useRef<string | null>(null);
+  const reloadToken = useWorkspace((s) => s.reloadToken);
+  const lastReloadToken = useRef(reloadToken);
 
   const activePath = useWorkspace((s) => s.activePath);
   const content = useWorkspace((s) => s.content);
@@ -293,7 +295,10 @@ export function CodeEditor() {
     const view = viewRef.current;
     if (!view) return;
     const pathChanged = activePath !== lastPath.current;
-    if (pathChanged || view.state.doc.toString() !== content) {
+    const reloadTriggered = reloadToken !== lastReloadToken.current;
+    lastReloadToken.current = reloadToken;
+
+    if (pathChanged || reloadTriggered || view.state.doc.toString() !== content) {
       applyingExternal.current = true;
       view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: content }, ...(pathChanged ? { selection: { anchor: 0 } } : {}) });
       applyingExternal.current = false;
@@ -309,7 +314,7 @@ export function CodeEditor() {
         warmupSyntax(view);
       }
     }
-  }, [activePath, content]);
+  }, [activePath, content, reloadToken]);
 
   useEffect(() => {
     const host = containerRef.current;

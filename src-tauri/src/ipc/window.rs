@@ -318,3 +318,9 @@ pub fn exec_for_all(app: &tauri::AppHandle, payload: &Value) -> Result<Value, St
     }
     Ok(json!(true))
 }
+
+/// 渲染层主动上报获得焦点，与原生 WindowEvent::Focused 双重保障。
+pub fn report_focus(window: &WebviewWindow, state: &crate::state::AppState) -> Result<Value, String> {
+    state.set_last_focused_window(window.label());
+    Ok(json!(true))
+}

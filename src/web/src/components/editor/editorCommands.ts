@@ -268,11 +268,17 @@ export const stylize = {
     const range = v.state.selection.main;
     const startLine = v.state.doc.lineAt(range.from);
     const endLine = v.state.doc.lineAt(range.to);
+    const currentM = /^(#{1,6})\s+/.exec(startLine.text);
+    const isSameLevel = currentM && currentM[1].length === level;
     const changes = [];
     for (let l = startLine.number; l <= endLine.number; l++) {
       const line = v.state.doc.line(l);
       const stripped = line.text.replace(/^#{1,6}\s+/, "");
-      changes.push({ from: line.from, to: line.to, insert: "#".repeat(level) + " " + stripped });
+      changes.push({
+        from: line.from,
+        to: line.to,
+        insert: isSameLevel ? stripped : "#".repeat(level) + " " + stripped,
+      });
     }
     v.dispatch({ changes }); v.focus();
   },

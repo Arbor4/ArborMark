@@ -385,3 +385,20 @@ jobs:
             echo "::error::Release 没有安装包资产"
             exit 1
           fi
+
+      - name: Generate and upload SHA-256 checksums
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          WORKDIR=$(mktemp -d)
+          cd "$WORKDIR"
+          gh release download "$TAG" --repo "${GITHUB_REPOSITORY}" -p '*.dmg' -p '*.exe' -p '*.msi' -p '*.deb' -p '*.AppImage' -p '*.rpm'
+          sha256sum * > SHA256SUMS.txt
+          echo "=== Generated SHA256 Checksums ==="
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --repo "${GITHUB_REPOSITORY}" --clobber
+          rm -rf "$WORKDIR"
