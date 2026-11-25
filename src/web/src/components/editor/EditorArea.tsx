@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useWorkspace } from "@/stores/workspace";
 import { useUi } from "@/stores/ui";
-import { MilkdownEditor, syntaxSignature } from "./MilkdownEditor";
-import { CodeEditor } from "./CodeEditor";
-import { isMarkdownFile, getPreviewKind } from "./codeLanguage";
+import { MilkdownEditor, syntaxSignature } from "./milkdown/MilkdownEditor";
+import { CodeEditor } from "./codemirror/CodeEditor";
+import { isMarkdownFile, getPreviewKind } from "./codemirror/codeLanguage";
 import { FilePreview } from "./FilePreview";
 import { pathUtil } from "@/bridge/fs";
 import { TablePicker } from "./TablePicker";
@@ -32,7 +32,7 @@ import {
   Hash,
   ImagePlus,
 } from "lucide-react";
-import { getEditorView } from "./EditorHost";
+import { getEditorView } from "./codemirror/EditorHost";
 import { toolbar } from "./toolbarCommands";
 import { useEditorContextMenu, formatShortcut } from "../EditorContextMenu";
 import { useLang } from "@/bridge/i18n";

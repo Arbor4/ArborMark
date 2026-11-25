@@ -13,12 +13,12 @@ import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } 
 import { tags } from "@lezer/highlight";
 import { useWorkspace } from "@/stores/workspace";
 import { useUi, EDITOR_WIDTHS } from "@/stores/ui";
-import { setActiveEditor } from "./activeEditor";
-import { captureFromCm, applyToCm } from "./editorViewSync";
-import { openLinkTarget } from "./openLink";
+import { setActiveEditor } from "../activeEditor";
+import { captureFromCm, applyToCm } from "../editorViewSync";
+import { openLinkTarget } from "../openLink";
 import { loadLanguage, languageLabel, isMarkdownFile } from "./codeLanguage";
-import { refreshFind } from "./findSync";
-import { attachImageHandlers } from "./imageInsert";
+import { refreshFind } from "../findSync";
+import { attachImageHandlers } from "../imageInsert";
 import { useLang } from "@/bridge/i18n";
 
 /** 主题感知的代码高亮配色（全部走主题 token）。 */

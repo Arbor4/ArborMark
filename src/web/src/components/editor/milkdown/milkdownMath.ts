@@ -12,6 +12,8 @@ import katex from "katex";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
 import { t } from "@/bridge/i18n";
+import { useLightbox } from "@/stores/lightbox";
+import { createZoomButton } from "../imageSrc";
 
 const KATEX_OPTS = { throwOnError: false, strict: false, trust: false, output: "html" as const };
 
@@ -204,6 +206,7 @@ export const mathInlineView = $view(mathInlineSchema.node, () => (initialNode, v
 export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, view: EditorView, getPos) => {
   let node: ProseNode = initialNode;
   let editing = false;
+  let destroyed = false;
 
   const dom = document.createElement("div");
   dom.className = "am-math-block";
@@ -219,15 +222,29 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
   const { label: previewLabel, badge } = makePreviewLabel();
   const renderArea = document.createElement("div");
   renderArea.className = "am-math-render";
+  renderArea.contentEditable = "false";
   const hint = document.createElement("div");
   hint.className = "am-math-hint";
+  hint.contentEditable = "false";
   hint.textContent = "点击编辑公式";
-  // 顺序：源码面板（上）→ 预览标签 → 公式（下）→ 提示
-  dom.append(pane, previewLabel, renderArea, hint);
+  const zoomBtn = createZoomButton(t("放大查看"), () => {
+    const tex = (node.attrs.value as string) ?? "";
+    if (!tex.trim()) return;
+    useLightbox.getState().openMath(tex, t("onboard.demo.math"));
+  });
+  // 顺序：源码面板（上）→ 预览标签 → 公式（下）→ 提示 → 放大按钮
+  dom.append(pane, previewLabel, renderArea, hint, zoomBtn);
 
   const live = makeLivePreview(renderArea, badge, true);
   const posOf = () => (typeof getPos === "function" ? getPos() : undefined);
-  const render = () => renderKatex((node.attrs.value as string) ?? "", renderArea, true);
+  const syncZoomBtn = () => {
+    const tex = (node.attrs.value as string) ?? "";
+    zoomBtn.style.display = !editing && !!tex.trim() ? "" : "none";
+  };
+  const render = () => {
+    renderKatex((node.attrs.value as string) ?? "", renderArea, true);
+    syncZoomBtn();
+  };
 
   const commit = () => {
     const pos = posOf();
@@ -251,6 +268,7 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
     pane.style.display = "block";
     previewLabel.style.display = "";
     hint.style.display = "none";
+    syncZoomBtn();
     editor.value = (node.attrs.value as string) ?? "";
     autoSize();
     live.flush(editor.value);
@@ -259,6 +277,8 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
     };
     document.addEventListener("mousedown", outsideHandler, true);
     editor.focus();
+    const len = editor.value.length;
+    editor.setSelectionRange(len, len);
   };
 
   const exitEdit = () => {
@@ -278,6 +298,7 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
   };
 
   renderArea.addEventListener("click", enterEdit);
+  dom.addEventListener("am-enter-edit", enterEdit);
   editor.addEventListener("input", () => {
     commit();
     autoSize();
@@ -289,6 +310,10 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
   });
 
   render();
+  // 交互式创建空公式块（如输入 $$ 回车）：聚焦时自动展开编辑并将光标落入源码框
+  if (view.hasFocus() && !String(node.attrs.value ?? "").trim()) {
+    requestAnimationFrame(() => { if (!destroyed && !editing) enterEdit(); });
+  }
 
   return {
     dom,
@@ -300,9 +325,13 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
     },
     selectNode() { dom.classList.add("am-math-selected"); },
     deselectNode() { dom.classList.remove("am-math-selected"); exitEdit(); },
-    stopEvent(event: Event) { return editing && pane.contains(event.target as Node); },
+    stopEvent(event: Event) {
+      const target = event.target as Node;
+      return (editing && pane.contains(target)) || zoomBtn.contains(target);
+    },
     ignoreMutation() { return true; },
     destroy() {
+      destroyed = true;
       live.cancel();
       if (outsideHandler) document.removeEventListener("mousedown", outsideHandler, true);
     },

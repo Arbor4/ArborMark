@@ -22,7 +22,7 @@ import { defaultKeymap, indentWithTab, history, historyKeymap } from "@codemirro
 import { markdown, markdownLanguage } from "@codemirror/lang-markdown";
 import { syntaxTree, HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { highlightSelectionMatches } from "@codemirror/search";
-import { findField } from "./findSync";
+import { findField } from "../findSync";
 import { tags } from "@lezer/highlight";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import {

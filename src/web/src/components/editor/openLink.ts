@@ -4,7 +4,7 @@ import { useWorkspace } from "@/stores/workspace";
 import { useUi } from "@/stores/ui";
 import { getMilkdown } from "./activeEditor";
 import { editorViewCtx } from "@milkdown/core";
-import { jumpToAnchor } from "./milkdownAnchors";
+import { jumpToAnchor } from "./milkdown/milkdownAnchors";
 
 /** 规范化路径拼接（处理 . 与 ..，兼容 Windows \ 与 Unix /） */
 export function resolveRelativePath(baseDir: string, relPath: string): string {

@@ -1,4 +1,4 @@
-import { getEditorView } from "./EditorHost";
+import { getEditorView } from "./codemirror/EditorHost";
 
 /** 工具栏动作：直接操作 CM6 视图（保留撤销栈）。 */
 

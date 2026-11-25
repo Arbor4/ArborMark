@@ -98,22 +98,23 @@ ArborMark/
 ├── src/
 │   └── web/                 # React frontend (Vite + Tailwind CSS)
 │       └── src/
-│           ├── components/  # WYSIWYG & CodeMirror editors, panels, dialogs
-│           ├── stores/      # Zustand state stores (workspace, ui, search)
-│           ├── bridge/      # IPC, file system abstraction, i18n
+│           ├── components/  # Editors (editor/milkdown, editor/codemirror), panels (files, outline, settings)
+│           ├── chrome/      # Custom title bar (Windows) & menu model
+│           ├── stores/      # Zustand state stores (workspace, ui, search, find)
+│           ├── bridge/      # IPC, file system abstraction, i18n, updater
 │           ├── theme/       # Design tokens & theme registry
 │           └── styles/      # CSS styles
 ├── src-tauri/               # Tauri 2 + Rust native backend
 │   ├── locales/             # Native menu translation packs
 │   └── src/
-│       ├── ipc/             # IPC handlers (fs, images, export, settings)
+│       ├── ipc/             # IPC handlers (fs, document, library, export, setting, misc)
 │       ├── menu.rs          # Native OS menu bar & accelerators
 │       ├── protocol.rs      # Custom arbormark:// asset protocol
 │       ├── state.rs         # Application state & persistence
 │       └── windows.rs       # Window lifecycle & multi-window management
 ├── resources/               # Application icons & installer assets
 ├── tools/                   # Development utilities & scripts
-└── docs/                    # Technical & architectural documentation
+└── docs/                    # Architecture notes, build guides & archived migration docs
 ```
 
 ---

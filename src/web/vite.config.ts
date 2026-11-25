@@ -23,18 +23,21 @@ export default defineConfig({
     chunkSizeWarningLimit: 1600,
     rollupOptions: {
       output: {
-        manualChunks: {
-          editor: [
-            "@codemirror/state",
-            "@codemirror/view",
-            "@codemirror/commands",
-            "@codemirror/language",
-            "@codemirror/lang-markdown",
-            "@codemirror/search",
-            "@codemirror/autocomplete",
-          ],
-          preview: ["markdown-it", "dompurify", "katex", "highlight.js"],
-          react: ["react", "react-dom", "zustand"],
+        manualChunks(id) {
+          if (!id.includes("node_modules")) return;
+          if (id.includes("@milkdown/")) return "milkdown";
+          if (id.includes("@codemirror/") || id.includes("@lezer/")) return "editor";
+          if (
+            id.includes("markdown-it") ||
+            id.includes("dompurify") ||
+            id.includes("katex") ||
+            id.includes("highlight.js")
+          ) {
+            return "preview";
+          }
+          if (id.includes("react-dom") || id.includes("/react/") || id.includes("/zustand/")) {
+            return "react";
+          }
         },
       },
     },

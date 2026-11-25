@@ -6,7 +6,7 @@ import { $view } from "@milkdown/utils";
 import { listItemSchema } from "@milkdown/preset-commonmark";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
-import { notifyUserEdit } from "./activeEditor";
+import { notifyUserEdit } from "../activeEditor";
 
 export const taskListNodeView = $view(listItemSchema.node, () => (initialNode, view: EditorView, getPos) => {
   let node: ProseNode = initialNode;

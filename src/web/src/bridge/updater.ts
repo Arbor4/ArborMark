@@ -1,4 +1,6 @@
 import { fs } from "@/bridge/fs";
+import { t } from "@/bridge/i18n";
+import { invoke, isTauri } from "@/bridge/ipc";
 import { useUi } from "@/stores/ui";
 
 export const CURRENT_VERSION = "4.0.3";
@@ -6,6 +8,7 @@ export const GITHUB_REPO = "Arbor4/ArborMark";
 
 export interface UpdateInfo {
   hasUpdate: boolean;
+  currentVersion: string;
   latestVersion: string;
   releaseUrl: string;
   releaseNotes: string;
@@ -26,7 +29,7 @@ function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
-export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
+async function fetchFromBrowserApi(): Promise<UpdateInfo> {
   const url = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
   const res = await fetch(url, {
     headers: {
@@ -41,6 +44,7 @@ export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
   const hasUpdate = compareVersions(latestTag, CURRENT_VERSION) > 0;
   return {
     hasUpdate,
+    currentVersion: CURRENT_VERSION,
     latestVersion: latestTag,
     releaseUrl: data.html_url || `https://github.com/${GITHUB_REPO}/releases`,
     releaseNotes: data.body || "",
@@ -48,26 +52,65 @@ export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
   };
 }
 
+export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
+  if (isTauri()) {
+    try {
+      const res = await invoke<{
+        currentVersion?: string;
+        latestVersion?: string;
+        releaseUrl?: string;
+        releaseNotes?: string;
+        publishedAt?: string;
+      }>("updater.checkForUpdates");
+      const current = res?.currentVersion || CURRENT_VERSION;
+      const latest = String(res?.latestVersion || "").replace(/^v/i, "");
+      if (latest) {
+        return {
+          hasUpdate: compareVersions(latest, current) > 0,
+          currentVersion: current,
+          latestVersion: latest,
+          releaseUrl: res.releaseUrl || `https://github.com/${GITHUB_REPO}/releases`,
+          releaseNotes: res.releaseNotes || "",
+          publishedAt: res.publishedAt || undefined,
+        };
+      }
+    } catch {
+      /* 桌面端原生 curl 失败（例如系统 PAC 代理仅浏览器可见）时，回退到浏览器 fetch */
+    }
+  }
+  return fetchFromBrowserApi();
+}
+
 export async function runCheckForUpdates(interactive = true) {
   const ui = useUi.getState();
   if (interactive) {
-    ui.toast("正在检查更新…", "info");
+    ui.toast(t("正在检查更新…"), "info");
   }
   try {
     const info = await checkUpdateFromGitHub();
     if (info.hasUpdate) {
-      const ok = window.confirm(
-        `发现新版本 ArborMark v${info.latestVersion}（当前版本 v${CURRENT_VERSION}）！\n\n更新说明：\n${info.releaseNotes.slice(0, 300)}${info.releaseNotes.length > 300 ? "..." : ""}\n\n是否前往 GitHub Releases 下载更新？`
-      );
+      const notes = info.releaseNotes.trim();
+      const notesBlock = notes
+        ? `\n\n${t("更新说明：")}\n${notes.slice(0, 300)}${notes.length > 300 ? "..." : ""}`
+        : "";
+      const ok = await ui.confirm({
+        title: t("发现新版本"),
+        message: `${t("发现新版本 ArborMark v{latest}（当前版本 v{current}）！", {
+          latest: info.latestVersion,
+          current: info.currentVersion,
+        })}${notesBlock}\n\n${t("是否前往 GitHub Releases 下载更新？")}`,
+        confirmText: t("前往下载"),
+        cancelText: t("稍后再说"),
+      });
       if (ok) {
         await fs.openExternal(info.releaseUrl);
       }
     } else if (interactive) {
-      ui.toast(`已是最新版本 (v${CURRENT_VERSION})`, "success");
+      ui.toast(t("已是最新版本 (v{v})", { v: info.currentVersion }), "success");
     }
   } catch {
     if (interactive) {
-      ui.toast("检查更新失败，请检查网络连接", "danger");
+      ui.toast(t("检查更新失败，请检查网络连接"), "danger");
     }
   }
 }

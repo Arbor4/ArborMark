@@ -171,10 +171,10 @@ export function GlobalSearchModal() {
               aria-label={t("全局搜索")}
               className="h-[42px] min-w-0 flex-1 bg-transparent text-[14px] text-ink placeholder:text-ink-muted"
             />
-            {optionBtn("caseSensitive", "区分大小写", <CaseSensitive size={15} />, caseSensitive)}
-            {optionBtn("wholeWord", "全词匹配", <WholeWord size={15} />, wholeWord)}
-            {optionBtn("useRegexp", "正则表达式", <Regex size={15} />, useRegexp)}
-            <Tooltip label={showReplace ? "隐藏替换" : "显示替换"}>
+            {optionBtn("caseSensitive", t("区分大小写"), <CaseSensitive size={15} />, caseSensitive)}
+            {optionBtn("wholeWord", t("全词匹配"), <WholeWord size={15} />, wholeWord)}
+            {optionBtn("useRegexp", t("正则表达式"), <Regex size={15} />, useRegexp)}
+            <Tooltip label={t(showReplace ? "隐藏替换" : "显示替换")}>
               <button
                 aria-label={t("切换替换")}
                 aria-pressed={showReplace}
@@ -184,6 +184,15 @@ export function GlobalSearchModal() {
                 }`}
               >
                 <Replace size={15} />
+              </button>
+            </Tooltip>
+            <Tooltip label={t("关闭")}>
+              <button
+                aria-label={t("关闭")}
+                onClick={() => setOpen(false)}
+                className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted transition-colors hover:bg-hover hover:text-ink"
+              >
+                <X size={15} />
               </button>
             </Tooltip>
           </div>
@@ -201,7 +210,7 @@ export function GlobalSearchModal() {
                 disabled={!totalMatches}
                 onClick={async () => {
                   await replaceAll();
-                  toast("全部替换完成", "success");
+                  toast(t("全部替换完成"), "success");
                 }}
                 className="flex h-7 items-center gap-1 rounded-md border border-line px-2.5 text-[11.5px] text-ink-secondary transition-colors hover:bg-hover disabled:opacity-30"
               >

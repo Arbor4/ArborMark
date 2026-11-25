@@ -22,7 +22,10 @@ function md(fn: (view: EditorView, schema: Schema) => boolean): boolean {
     const schema = ctx.get(schemaCtx);
     notifyUserEdit();
     const ok = fn(view, schema);
-    if (ok) view.focus();
+    const active = document.activeElement;
+    // 若节点视图（公式/图表）已把焦点放入内部输入框，不再抢回根编辑区
+    const inInnerEditor = active instanceof HTMLElement && view.dom.contains(active) && active !== view.dom;
+    if (ok && !inInnerEditor) view.focus();
     return ok;
   });
 }
@@ -80,23 +83,109 @@ function insertNode(name: string, attrs?: Record<string, unknown>) {
     return true;
   });
 }
-/** 整块插入后把光标落到块后文本行（无则补空行），避免下一次插入替换刚插入的块。 */
-function dispatchBlockInsert(view: EditorView, schema: Schema, n: ProseNode) {
+/** 整块插入后把光标落到块后文本行（无则补空行）；autoEdit 为真时立即进入该块编辑并聚焦其源码输入框。 */
+export function dispatchBlockInsert(view: EditorView, schema: Schema, n: ProseNode, autoEdit = false) {
+  const insertAt = view.state.selection.from;
   const tr = view.state.tr.replaceSelectionWith(n);
   let sel = TextSelection.near(tr.doc.resolve(Math.min(tr.selection.to, tr.doc.content.size)), 1);
   if (!(sel instanceof TextSelection)) {
     tr.insert(tr.doc.content.size, schema.nodes.paragraph.create());
     sel = TextSelection.near(tr.doc.resolve(tr.doc.content.size - 1), 1);
   }
+  let blockPos: number | null = null;
+  if (autoEdit) {
+    tr.doc.nodesBetween(Math.max(0, insertAt - 1), Math.min(tr.doc.content.size, tr.selection.to), (node, pos) => {
+      if (node === n) {
+        blockPos = pos;
+        return false;
+      }
+      return true;
+    });
+  }
   view.dispatch(tr.setSelection(sel));
+  if (autoEdit && blockPos != null) {
+    const blockDom = view.nodeDOM(blockPos);
+    if (blockDom instanceof HTMLElement) {
+      blockDom.dispatchEvent(new CustomEvent("am-enter-edit"));
+    }
+  }
 }
-function insertBlockNode(name: string, attrs?: Record<string, unknown>) {
+function insertBlockNode(name: string, attrs?: Record<string, unknown>, autoEdit = false) {
   return md((view, schema) => {
     const type = schema.nodes[name];
     if (!type) return false;
-    dispatchBlockInsert(view, schema, type.create(attrs));
+    dispatchBlockInsert(view, schema, type.create(attrs), autoEdit);
     return true;
   });
+}
+
+/**
+ * 将当前选区转为单个代码块：
+ * - 若选区末尾恰好落在下一块起始（$to.parentOffset === 0），回退到上一文本块末尾，
+ *   避免误将空行及相邻下一行拆成两个代码块；
+ * - 若跨多个文本块，合并文本为单个 code_block，而非逐块生成多个代码块。
+ */
+export function convertSelectionToCodeBlock(view: EditorView, schema: Schema): boolean {
+  const codeBlock = schema.nodes.code_block;
+  if (!codeBlock) return false;
+  const { state } = view;
+  const { from, to, $from, $to } = state.selection;
+
+  let endPos = to;
+  let $end = $to;
+  if (!$from.sameParent($to) && $to.parentOffset === 0 && to > from) {
+    const prev = TextSelection.near(state.doc.resolve($to.before($to.depth)), -1).$to;
+    if (prev.pos >= from && !prev.sameParent($to)) {
+      endPos = prev.pos;
+      $end = prev;
+    }
+  }
+
+  if ($from.sameParent($end)) {
+    if ($from.parent.type === codeBlock) return false;
+    const parent = $from.node($from.depth - 1);
+    const idx = $from.index($from.depth - 1);
+    if (parent.canReplaceWith(idx, idx + 1, codeBlock)) {
+      const tr = state.tr.setBlockType(from, endPos, codeBlock);
+      const maxPos = tr.doc.content.size;
+      tr.setSelection(TextSelection.create(tr.doc, Math.min(from, maxPos), Math.min(endPos, maxPos)));
+      view.dispatch(tr);
+      return true;
+    }
+    const itemType = schema.nodes.list_item;
+    if (itemType && parent.type === itemType) {
+      if (endPos !== to) {
+        view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, from, endPos)).setMeta("addToHistory", false));
+      }
+      if (liftListItem(itemType)(view.state, view.dispatch, view)) {
+        return (setBlockType(codeBlock) as PMCommand)(view.state, view.dispatch, view);
+      }
+    }
+    return false;
+  }
+
+  const lines: string[] = [];
+  state.doc.nodesBetween(from, endPos, (node) => {
+    if (!node.isTextblock) return true;
+    lines.push(node.textContent);
+    return false;
+  });
+  const sharedDepth = $from.sharedDepth(endPos);
+  const replaceDepth = sharedDepth + 1;
+  if ($from.depth < replaceDepth || $end.depth < replaceDepth) return false;
+  const container = $from.node(sharedDepth);
+  const fromIdx = $from.index(sharedDepth);
+  const toIdx = $end.index(sharedDepth) + 1;
+  if (!container.canReplaceWith(fromIdx, toIdx, codeBlock)) return false;
+
+  const replaceFrom = $from.before(replaceDepth);
+  const replaceTo = $end.after(replaceDepth);
+  const text = lines.join("\n");
+  const cbNode = codeBlock.create(null, text ? schema.text(text) : undefined);
+  const tr = state.tr.replaceWith(replaceFrom, replaceTo, cbNode);
+  tr.setSelection(TextSelection.near(tr.doc.resolve(replaceFrom + 1), 1));
+  view.dispatch(tr);
+  return true;
 }
 
 export const toolbar = {
@@ -171,17 +260,7 @@ export const toolbar = {
     if (!done) insertAtCursor("[链接](https://)");
   },
   codeBlock() {
-    const done = md((view, schema) => {
-      const node = schema.nodes.code_block;
-      if (!node) return false;
-      if ((setBlockType(node) as PMCommand)(view.state, view.dispatch, view)) return true;
-      // list_item 首子节点必须为 paragraph：先 lift 出列表再转换
-      const itemType = schema.nodes.list_item;
-      if (itemType && liftListItem(itemType)(view.state, view.dispatch, view)) {
-        return (setBlockType(node) as PMCommand)(view.state, view.dispatch, view);
-      }
-      return false;
-    });
+    const done = md((view, schema) => convertSelectionToCodeBlock(view, schema));
     if (!done) insertAtCursor("```\n\n```");
   },
   hr() {
@@ -240,13 +319,13 @@ export const toolbar = {
       if (!type) return false;
       const { from, to, empty } = view.state.selection;
       const value = empty ? "" : view.state.doc.textBetween(from, to);
-      dispatchBlockInsert(view, schema, type.create({ value }));
+      dispatchBlockInsert(view, schema, type.create({ value }), true);
       return true;
     });
     if (!done) insertAtCursor("$$\n\n$$");
   },
   diagram() {
-    if (!insertBlockNode("diagram", { value: "" })) insertAtCursor("```mermaid\n\n```");
+    if (!insertBlockNode("diagram", { value: "" }, true)) insertAtCursor("```mermaid\n\n```");
   },
   blankImage() {
     const done = md((view, schema) => {

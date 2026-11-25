@@ -7,7 +7,7 @@
 import { $view, $prose } from "@milkdown/utils";
 import { codeBlockSchema } from "@milkdown/preset-commonmark";
 import { editorViewCtx } from "@milkdown/core";
-import { paintCodeFind } from "./findSync";
+import { paintCodeFind } from "../findSync";
 import { TextSelection, NodeSelection, Plugin, PluginKey, type Transaction } from "@milkdown/prose/state";
 import { liftListItem } from "@milkdown/prose/schema-list";
 import { Decoration } from "@milkdown/prose/view";
@@ -122,6 +122,7 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
 
   const dom = document.createElement("div");
   dom.className = "am-codeblock";
+  dom.contentEditable = "false";
   dom.setAttribute("data-testid", "codeblock");
 
   const header = document.createElement("div");
@@ -139,6 +140,7 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
   body.className = "am-codeblock-body";
   const viewArea = document.createElement("pre");
   viewArea.className = "am-codeblock-view hljs";
+  viewArea.contentEditable = "false";
   const viewCode = document.createElement("code");
   viewArea.appendChild(viewCode);
   const editPre = document.createElement("pre");
@@ -146,6 +148,7 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
   editPre.style.display = "none";
   const contentDOM = document.createElement("code");
   contentDOM.className = "hljs";
+  contentDOM.contentEditable = "true";
   editPre.appendChild(contentDOM);
   body.append(viewArea, editPre);
   dom.append(header, body);
@@ -287,23 +290,71 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
 
   let outsideHandler: ((e: MouseEvent) => void) | null = null;
 
-  const enterEdit = () => {
-    if (editing) return;
-    editing = true;
+  /** 按点击坐标推算目标代码行与字符位置（适配非首行及行尾空白点击）。 */
+  const resolveCodeClickPos = (code: string, blockStart: number, e: MouseEvent): number => {
+    const lines = code.split("\n");
+    const contentRect = contentDOM.getBoundingClientRect();
+    const parsedLh = parseFloat(getComputedStyle(contentDOM).lineHeight);
+    const lineHeight = Number.isFinite(parsedLh) && parsedLh > 0
+      ? parsedLh
+      : contentRect.height / Math.max(lines.length, 1);
+    const lineIdx = Math.max(0, Math.min(lines.length - 1, Math.floor((e.clientY - contentRect.top) / lineHeight)));
+
+    let lineOffset = 0;
+    for (let i = 0; i < lineIdx; i++) lineOffset += lines[i].length + 1;
+    const lineStart = blockStart + lineOffset;
+    const lineEnd = lineStart + lines[lineIdx].length;
+
+    if (lines[lineIdx].length === 0 || e.clientX <= contentRect.left) return lineStart;
+    if (e.clientX >= view.coordsAtPos(lineEnd).left - 2) return lineEnd;
+
+    const hit = view.posAtCoords({ left: e.clientX, top: e.clientY });
+    if (hit && hit.pos >= lineStart && hit.pos <= lineEnd) {
+      if (hit.pos > lineStart || e.clientX <= view.coordsAtPos(lineStart).left + 6) {
+        return hit.pos;
+      }
+    }
+
+    let lo = lineStart;
+    let hi = lineEnd;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      const midX = (view.coordsAtPos(mid).left + view.coordsAtPos(mid + 1).left) / 2;
+      if (e.clientX < midX) hi = mid;
+      else lo = mid + 1;
+    }
+    return lo;
+  };
+
+  const activateEditUI = () => {
+    const prevScrollLeft = viewArea.scrollLeft;
+    const prevScrollTop = viewArea.scrollTop;
     dom.classList.add("am-codeblock-editing");
     viewArea.style.display = "none";
     editPre.style.display = "block";
+    editPre.scrollLeft = prevScrollLeft;
+    editPre.scrollTop = prevScrollTop;
     paintCodeFind();
+    if (!outsideHandler) {
+      // ProseMirror 焦点始终在根 contenteditable，focusout 不可靠；用文档级外部点击退出。
+      outsideHandler = (ev: MouseEvent) => {
+        if (!dom.contains(ev.target as Node)) exitEdit();
+      };
+      document.addEventListener("mousedown", outsideHandler, true);
+    }
+    editing = true;
+  };
+
+  const enterEdit = (e?: MouseEvent) => {
+    if (e && e.button !== 0) return;
+    if (editing) return;
+    activateEditUI();
     const pos = posOf();
     if (pos != null) {
-      const tr = view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(pos + 1)));
+      const targetPos = e ? resolveCodeClickPos(node.textContent, pos + 1, e) : pos + 1;
+      const tr = view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(targetPos)));
       view.dispatch(tr);
     }
-    // ProseMirror 焦点始终在根 contenteditable，focusout 不可靠；用文档级外部点击退出。
-    outsideHandler = (e: MouseEvent) => {
-      if (!dom.contains(e.target as Node)) exitEdit();
-    };
-    document.addEventListener("mousedown", outsideHandler, true);
     view.focus();
   };
 
@@ -320,7 +371,31 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
     renderView();
   };
 
-  viewArea.addEventListener("click", enterEdit);
+  const selectionInsideThisNode = (target: ProseNode) => {
+    const { $from, $to, from, to } = view.state.selection;
+    try {
+      const p = posOf();
+      if (p != null) return from > p && to < p + target.nodeSize;
+    } catch {
+      /* NodeView 首次构造尚未挂载到父节点时，回退节点引用判定 */
+    }
+    return $from.parent === target && $to.parent === target;
+  };
+
+  viewArea.addEventListener("click", (e) => enterEdit(e));
+  dom.addEventListener("am-codeblock-enter", () => {
+    if (editing) return;
+    activateEditUI();
+    queueMicrotask(() => {
+      if (destroyed || !editing) return;
+      const anchor = document.getSelection()?.anchorNode ?? null;
+      if (!anchor || !contentDOM.contains(anchor)) {
+        const sel = view.state.selection;
+        view.dispatch(view.state.tr.setSelection(TextSelection.create(view.state.doc, sel.from, sel.to)).setMeta("addToHistory", false));
+        view.focus();
+      }
+    });
+  });
   // 选区离开代码块（键盘跳出 / 点击空白）时自动退出编辑态
   const syncEditBySelection = () => {
     if (!editing) return;
@@ -354,6 +429,9 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
   });
 
   renderView();
+  if (selectionInsideThisNode(node)) {
+    activateEditUI();
+  }
 
   return {
     dom,
@@ -361,6 +439,7 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
     update(newNode: ProseNode) {
       if (newNode.type !== node.type) return false;
       node = newNode;
+      if (!editing && selectionInsideThisNode(newNode)) activateEditUI();
       if (!editing) renderView();
       else langBadge.textContent = (node.attrs.language as string) || "text";
       return true;
@@ -489,6 +568,18 @@ export function placeBlockCaret(view: EditorView, x: number, y: number): boolean
 export const codeBlockEscapePlugin = $prose(
   () =>
     new Plugin({
+      view: () => ({
+        update: (editorView) => {
+          const sel = editorView.state.selection;
+          if (!(sel instanceof TextSelection)) return;
+          const { $from, $to } = sel;
+          if (!$from.sameParent($to) || $from.parent.type.name !== "code_block") return;
+          const cbDom = editorView.nodeDOM($from.before($from.depth));
+          if (cbDom instanceof HTMLElement && !cbDom.classList.contains("am-codeblock-editing")) {
+            cbDom.dispatchEvent(new CustomEvent("am-codeblock-enter"));
+          }
+        },
+      }),
       props: {
         handleKeyDown: (view, event) => {
           const key = event.key;

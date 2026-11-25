@@ -17,8 +17,8 @@ import { SettingsPanel } from "@/components/settings/SettingsPanel";
 import { QuickOpen } from "@/components/QuickOpen";
 import { ImageLightbox } from "@/components/ImageLightbox";
 import { Onboarding } from "@/components/Onboarding";
-import { Toasts } from "@/components/common";
-import { isTauri, invoke } from "@/bridge/ipc";
+import { ConfirmDialog, Toasts } from "@/components/common";
+import { isTauri, invoke, listen } from "@/bridge/ipc";
 import { fs, pathUtil } from "@/bridge/fs";
 
 export default function App() {
@@ -58,6 +58,17 @@ export default function App() {
       }
       ws.openDefault();
     });
+  }, []);
+
+  /* 启动后延迟静默检查更新（受通用设置「自动检查更新」控制） */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (useUi.getState().prefs.autoCheckUpdate === false) return;
+      import("@/bridge/updater")
+        .then(({ runCheckForUpdates }) => runCheckForUpdates(false))
+        .catch(() => {});
+    }, 2500);
+    return () => clearTimeout(timer);
   }, []);
 
   /* 编辑区 ↔ 大纲 滚动联动（全局捕获 scroll，模式切换无需重绑） */
@@ -184,14 +195,12 @@ export default function App() {
   useEffect(() => {
     if (!isTauri()) return;
     let un: (() => void) | null = null;
-    import("@/bridge/ipc").then(({ listen }) => {
-      listen<string>("open-file", (event) => {
-        const filePath = typeof event === "string" ? event : (event as any).payload;
-        if (filePath && typeof filePath === "string") {
-          useWorkspace.getState().openPath(filePath).catch(() => {});
-        }
-      }).then((u) => (un = u));
-    });
+    listen<string>("open-file", (event) => {
+      const filePath = typeof event === "string" ? event : (event as any).payload;
+      if (filePath && typeof filePath === "string") {
+        useWorkspace.getState().openPath(filePath).catch(() => {});
+      }
+    }).then((u) => (un = u));
     return () => un?.();
   }, []);
 
@@ -199,32 +208,30 @@ export default function App() {
   useEffect(() => {
     if (!isTauri()) return;
     let un: (() => void) | null = null;
-    import("@/bridge/ipc").then(({ listen }) => {
-      listen<{ action: string }>("arbor-menu-action", ({ action }) => {
-        const ui = useUi.getState();
-        const ws = useWorkspace.getState();
-        switch (action) {
-          case "newFile":
-            if (ws.rootPath) ws.createFile(ws.rootPath);
-            break;
-          case "save":
-            ws.save();
-            break;
-          case "quickOpen":
-            ui.setQuickOpen(true);
-            break;
-          case "globalSearch":
-            ui.setGlobalSearch(true);
-            break;
-          case "preferences":
-            ui.openSettings();
-            break;
-          case "toggleSidebar":
-            ui.toggleChrome();
-            break;
-        }
-      }).then((u) => (un = u));
-    });
+    listen<{ action: string }>("arbor-menu-action", ({ action }) => {
+      const ui = useUi.getState();
+      const ws = useWorkspace.getState();
+      switch (action) {
+        case "newFile":
+          if (ws.rootPath) ws.createFile(ws.rootPath);
+          break;
+        case "save":
+          ws.save();
+          break;
+        case "quickOpen":
+          ui.setQuickOpen(true);
+          break;
+        case "globalSearch":
+          ui.setGlobalSearch(true);
+          break;
+        case "preferences":
+          ui.openSettings();
+          break;
+        case "toggleSidebar":
+          ui.toggleChrome();
+          break;
+      }
+    }).then((u) => (un = u));
     return () => un?.();
   }, []);
 
@@ -334,6 +341,7 @@ export default function App() {
       <GlobalSearchModal />
       <ImageLightbox />
       <Onboarding />
+      <ConfirmDialog />
       <Toasts />
     </div>
   );

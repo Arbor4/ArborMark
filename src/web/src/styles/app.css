@@ -961,7 +961,11 @@ aside[data-sidebar] [contenteditable="true"] {
 }
 .am-image-wrap:hover .am-image-zoom,
 .am-wysiwyg-image:hover .am-image-zoom,
+.am-math-block:hover .am-block-zoom,
+.am-diagram-wrap:hover .am-block-zoom,
 .am-image-zoom:focus-visible { opacity: 1; }
+.am-math-block.am-math-editing .am-block-zoom,
+.am-diagram-wrap.am-diagram-editing .am-block-zoom { display: none !important; }
 .am-image-zoom:hover { color: var(--am-accent); background: var(--am-bg-elevated); }
 .am-image-src-preview {
   display: flex;
@@ -1309,8 +1313,8 @@ div:has(> .am-milkdown-host) {
 .am-diagram-render svg foreignObject div { overflow: visible; }
 .am-diagram-hint {
   position: absolute;
-  top: 6px;
-  right: 10px;
+  top: 9px;
+  right: 38px;
   font-size: 10.5px;
   color: var(--am-text-muted);
   opacity: 0;
@@ -1364,12 +1368,9 @@ div:has(> .am-milkdown-host) {
 .am-milkdown-host .ProseMirror sup { font-size: 0.75em; vertical-align: super; line-height: 0; }
 .am-milkdown-host .ProseMirror sub { font-size: 0.75em; vertical-align: sub; line-height: 0; }
 
-/* ── 超长文档长篇块级虚拟渲染（视口外跳过排版重排，大幅消除长文滚轮丢帧） ── */
+/* ── 超长文档块级虚拟渲染（仅作用于只读容器；避免编辑/预览切换块在 WebKit 下失焦后未重绘） ── */
 .am-table-wrap,
-.am-wysiwyg-table,
-.am-codeblock,
-.am-diagram-wrap,
-.am-wysiwyg-math.am-math-block {
+.am-wysiwyg-table {
   content-visibility: auto;
   contain-intrinsic-size: auto 120px;
 }
@@ -1460,8 +1461,8 @@ div:has(> .am-milkdown-host) {
 .am-codeblock-copy:hover { color: var(--am-accent); border-color: var(--am-accent); }
 .am-codeblock-copy.copied { color: var(--am-success); border-color: var(--am-success); }
 .am-codeblock-body { position: relative; }
-.am-codeblock-view,
-.am-codeblock-edit {
+.am-milkdown-host .ProseMirror pre.am-codeblock-view,
+.am-milkdown-host .ProseMirror pre.am-codeblock-edit {
   margin: 0;
   padding: 12px 16px;
   font-family: var(--am-font-mono);
@@ -1620,7 +1621,6 @@ div:has(> .am-milkdown-host) {
   border-radius: var(--am-radius);
   background: color-mix(in srgb, var(--am-info) 4%, transparent);
   text-align: center;
-  overflow-x: auto;
   cursor: pointer;
 }
 .am-math-block:hover { border-color: var(--am-accent); }
@@ -1679,8 +1679,8 @@ div:has(> .am-milkdown-host) {
 .am-math-empty { color: var(--am-text-muted); font-size: 12px; }
 .am-math-hint {
   position: absolute;
-  top: 5px;
-  right: 10px;
+  top: 9px;
+  right: 38px;
   font-size: 10.5px;
   color: var(--am-text-muted);
   opacity: 0;
@@ -1718,9 +1718,7 @@ div:has(> .am-milkdown-host) {
 }
 .am-table-scroll { overflow-x: auto; }
 /* 横向滚动阴影指示（Scroll Affordance Shadow）：内容超出视口时，左右两端自动浮现平滑深度渐变阴影 */
-.am-table-scroll,
-.am-codeblock-view,
-.am-codeblock-edit {
+.am-table-scroll {
   background:
     linear-gradient(to right, var(--am-bg-elevated) 30%, rgba(0, 0, 0, 0)),
     linear-gradient(to right, rgba(0, 0, 0, 0), var(--am-bg-elevated) 70%) 100% 0,
@@ -1819,8 +1817,10 @@ div:has(> .am-milkdown-host) {
 .am-img-scroll-dark::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); }
 .am-img-scroll-dark::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.55); }
 .am-img-center { display: grid; place-items: center; min-width: 100%; min-height: 100%; width: max-content; height: max-content; }
-/* 编辑区超长图：限高 + 原生滚动，宽度撑满保持可読 */
-.am-image-wrap.am-image-tall { display: block; max-height: 60vh; overflow-y: auto; border-radius: 6px; }
+/* 编辑区超长图：内部视口限高滚动，外层保持定位使悬浮工具条与手柄固定在角落 */
+.am-image-viewport { display: contents; }
+.am-image-wrap.am-image-tall { display: block; border-radius: 6px; }
+.am-image-wrap.am-image-tall .am-image-viewport { display: block; max-height: 60vh; overflow-y: auto; border-radius: 6px; }
 .am-image-wrap.am-image-tall img { display: block; width: 100%; height: auto; max-height: none; }
 
 /* ── 表格覆盖层：列宽拖拽 + 行/列拖拽排序 ─────────────────────────────────── */

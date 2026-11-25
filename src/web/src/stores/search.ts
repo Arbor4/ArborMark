@@ -173,7 +173,7 @@ export const useSearch = create<SearchState>((set, get) => ({
           await fs.writeFile(fileResult.path, next);
           const ws = useWorkspace.getState();
           if (ws.activePath === fileResult.path) {
-            useWorkspace.setState({ content: next, savedContent: next, dirty: false });
+            await ws.reloadDocument(next);
           }
         }
       } catch {

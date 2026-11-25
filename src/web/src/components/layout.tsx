@@ -22,7 +22,7 @@ import { useWorkspace } from "@/stores/workspace";
 import { useLang } from "@/bridge/i18n";
 import { Tooltip } from "./common";
 import { getCurrentThemeId, getThemeMode, setThemeMode, isDarkActive, subscribeThemes } from "@/theme/registry";
-import { getPreviewKind } from "./editor/codeLanguage";
+import { getPreviewKind } from "./editor/codemirror/codeLanguage";
 import { pathUtil } from "@/bridge/fs";
 import { useSyncExternalStore } from "react";
 import { shouldSuppressClick } from "./files/dragSession";

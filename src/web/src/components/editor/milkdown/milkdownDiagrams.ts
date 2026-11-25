@@ -12,6 +12,8 @@ import mermaid from "mermaid";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
 import { t } from "@/bridge/i18n";
+import { useLightbox } from "@/stores/lightbox";
+import { createZoomButton } from "../imageSrc";
 
 let diagramUid = 0;
 let lastThemeKey = "";
@@ -136,11 +138,31 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
 
   const renderArea = document.createElement("div");
   renderArea.className = "am-diagram-render";
+  renderArea.contentEditable = "false";
   const hint = document.createElement("div");
   hint.className = "am-diagram-hint";
+  hint.contentEditable = "false";
   hint.textContent = t("点击编辑图表代码");
-  // 顺序：源码面板（上）→ 预览标签 → 图表（下）→ 提示
-  dom.append(editorPane, previewLabel, renderArea, hint);
+  const openZoom = () => {
+    const svgEl = renderArea.querySelector("svg");
+    if (!svgEl) return;
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    clone.style.width = "";
+    clone.style.height = "";
+    clone.style.maxWidth = "";
+    const vb = svgEl.viewBox?.baseVal;
+    const rect = svgEl.getBoundingClientRect();
+    const w = Math.max(1, (vb && vb.width) || rect.width || 600);
+    const h = Math.max(1, (vb && vb.height) || rect.height || 400);
+    useLightbox.getState().openSvg(clone.outerHTML, w, h, langLabel);
+  };
+  const zoomBtn = createZoomButton(t("放大查看"), openZoom);
+  // 顺序：源码面板（上）→ 预览标签 → 图表（下）→ 提示 → 放大按钮
+  dom.append(editorPane, previewLabel, renderArea, hint, zoomBtn);
+
+  const syncZoomBtn = () => {
+    zoomBtn.style.display = !editing && !!renderArea.querySelector("svg") ? "" : "none";
+  };
 
   const posOf = () => (typeof getPos === "function" ? getPos() : undefined);
 
@@ -150,6 +172,7 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
       if (destroyed || seq !== renderSeq) return;
       renderArea.innerHTML = '<span class="am-diagram-empty">' + t("空图表") + "</span>";
       errBadge.style.display = "none";
+      syncZoomBtn();
       return;
     }
     const id = `am-diagram-${++diagramUid}`;
@@ -164,6 +187,7 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
         fitSvg(svgEl as SVGSVGElement, maxW, editing ? 320 : 400);
       }
       errBadge.style.display = "none";
+      syncZoomBtn();
     } catch {
       document.getElementById(`d${id}`)?.remove();
       if (destroyed || seq !== renderSeq) return;
@@ -175,6 +199,7 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
         renderArea.innerHTML = `<pre class="am-diagram-fallback"></pre>`;
         renderArea.querySelector("pre")!.textContent = code;
       }
+      syncZoomBtn();
     }
   };
 
@@ -206,9 +231,12 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
     editorPane.style.display = "block";
     previewLabel.style.display = "flex";
     hint.style.display = "none";
+    syncZoomBtn();
     editor.value = (node.attrs.value as string) ?? "";
     autoSize();
     editor.focus();
+    const len = editor.value.length;
+    editor.setSelectionRange(len, len);
     renderDiagram(editor.value, true);
   };
 
@@ -222,10 +250,12 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
     previewLabel.style.display = "none";
     hint.style.display = "";
     errBadge.style.display = "none";
+    syncZoomBtn();
     renderDiagram((node.attrs.value as string) ?? "");
   };
 
   renderArea.addEventListener("click", () => { if (!editing) enterEdit(); });
+  dom.addEventListener("am-enter-edit", enterEdit);
   doneBtn.addEventListener("mousedown", (e) => e.preventDefault());
   doneBtn.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); exitEdit(); view.focus(); });
   editor.addEventListener("input", () => { commit(); autoSize(); scheduleLiveRender(); });
@@ -258,6 +288,7 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
 
   if (typeof IntersectionObserver !== "undefined") {
     showPlaceholder();
+    syncZoomBtn();
     io = new IntersectionObserver(
       (entries) => { if (entries.some((e) => e.isIntersecting)) renderOnce(); },
       { rootMargin: "300px 0px" },
@@ -265,6 +296,10 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
     io.observe(dom);
   } else {
     renderOnce();
+  }
+  // 交互式创建（如输入 ```mermaid 回车）：聚焦时自动进入编辑态并把光标落入源码区
+  if (view.hasFocus() && !String(node.attrs.value ?? "").trim()) {
+    requestAnimationFrame(() => { if (!destroyed && !editing) enterEdit(); });
   }
 
   return {
@@ -282,7 +317,7 @@ export function createDiagramNodeView(schema: { node: any }, toMermaid: (code: s
     deselectNode() { dom.classList.remove("am-diagram-selected"); },
     stopEvent(event: Event) {
       const t = event.target as Node;
-      return editorPane.contains(t) || previewLabel.contains(t);
+      return editorPane.contains(t) || previewLabel.contains(t) || zoomBtn.contains(t);
     },
     ignoreMutation() { return true; },
     destroy() {

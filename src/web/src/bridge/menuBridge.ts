@@ -17,7 +17,7 @@ import { fs } from "@/bridge/fs";
 import { invoke, isTauri } from "@/bridge/ipc";
 import { applyTheme, getAllThemes } from "@/theme/registry";
 import { renderMarkdown } from "@/components/editor/preview";
-import { getEditorView } from "@/components/editor/EditorHost";
+import { getEditorView } from "@/components/editor/codemirror/EditorHost";
 import * as EC from "@/components/editor/editorCommands";
 
 declare global {

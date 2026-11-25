@@ -155,3 +155,27 @@ export async function pasteFileClipboard(targetDir: string) {
   await useWorkspace.getState().refresh();
   toast(count ? `已粘贴 ${count} 个项目` : "没有可粘贴的项目", count ? "success" : "info");
 }
+
+/** 外部文件导入（浏览器 File API；Tauri 桌面端走原生拖拽事件）。 */
+export async function importExternalFiles(files: File[], targetDir: string) {
+  let count = 0;
+  let skipped = 0;
+  for (const file of files) {
+    const dest = pathUtil.join(targetDir, file.name);
+    if ((await fs.stat(dest)).exists) {
+      skipped++;
+      continue;
+    }
+    await fs.writeFile(dest, await file.text());
+    count++;
+  }
+  if (count) {
+    await useWorkspace.getState().refresh();
+    toast(
+      skipped ? `已导入 ${count} 个文件，${skipped} 个同名文件已跳过` : `已导入 ${count} 个文件`,
+      "success",
+    );
+  } else if (skipped) {
+    toast("同名文件已存在，未导入", "info");
+  }
+}

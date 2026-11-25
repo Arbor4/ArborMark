@@ -5,10 +5,10 @@ import { TextSelection } from "@milkdown/prose/state";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import { editorViewCtx, serializerCtx } from "@milkdown/core";
 import { getMilkdown, getCm6 } from "./activeEditor";
-import { editorJumpTo } from "./EditorHost";
-import { flashNodeAfterScroll, findNodeDOM } from "./milkdownFlash";
+import { editorJumpTo } from "./codemirror/EditorHost";
+import { flashNodeAfterScroll, findNodeDOM } from "./milkdown/milkdownFlash";
 import { computeBlockStartLines } from "./editorViewSync";
-import { jumpToLine as cmJumpToLine } from "./markdown";
+import { jumpToLine as cmJumpToLine } from "./codemirror/markdown";
 import { useWorkspace } from "@/stores/workspace";
 import type { EditorView } from "@milkdown/prose/view";
 

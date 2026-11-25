@@ -8,7 +8,7 @@ import { Plugin } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
 import { flashNodeAfterScroll } from "./milkdownFlash";
 import { useLinkEdit } from "@/stores/linkEdit";
-import { openLinkTarget } from "./openLink";
+import { openLinkTarget } from "../openLink";
 
 /** GitHub 风格标题 slug：小写、去标点、空格转连字符（保留中文）。 */
 export function slugify(text: string): string {

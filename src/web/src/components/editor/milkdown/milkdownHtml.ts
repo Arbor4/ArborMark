@@ -8,7 +8,7 @@ import { Plugin } from "@milkdown/prose/state";
 import { visit } from "unist-util-visit";
 import DOMPurify from "dompurify";
 import MarkdownIt from "markdown-it";
-import { resolveImageSrcAsync } from "./imageSrc";
+import { resolveImageSrcAsync } from "../imageSrc";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
 

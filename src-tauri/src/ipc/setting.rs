@@ -663,8 +663,8 @@ pub fn download_dict(app: &tauri::AppHandle, payload: &Value) -> Result<Value, S
         let mut ok = true;
         for ext in [".dic", ".aff"] {
             let dest = dir.join(format!("{locale}{ext}"));
-            let output = std::process::Command::new("curl")
-                .args(["-sL", "--max-time", "120", "-o"])
+            let output = super::misc::make_curl_command(120)
+                .args(["-sL", "-o"])
                 .arg(&dest)
                 .arg(format!("{base}{ext}"))
                 .output();

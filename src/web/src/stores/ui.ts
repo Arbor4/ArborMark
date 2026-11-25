@@ -11,6 +11,18 @@ export interface Toast {
   action?: { label: string; run: () => void };
 }
 
+export interface ConfirmOptions {
+  title?: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  danger?: boolean;
+}
+
+export interface ConfirmDialogState extends ConfirmOptions {
+  resolve: (ok: boolean) => void;
+}
+
 interface UiState {
   panel: PanelId;
   sidebarVisible: boolean;
@@ -27,6 +39,7 @@ interface UiState {
   imageInsertOpen: boolean;
   tablePickerPos: { x: number; y: number } | null;
   toasts: Toast[];
+  confirmDialog: ConfirmDialogState | null;
   autoSave: boolean;
   fontSize: number;
   editorWidth: "standard" | "wide" | "wider" | "full";
@@ -53,6 +66,8 @@ interface UiState {
   setTablePickerPos: (pos: { x: number; y: number } | null) => void;
   toast: (message: string, kind?: ToastKind, action?: Toast["action"]) => void;
   dismissToast: (id: number) => void;
+  confirm: (opts: ConfirmOptions) => Promise<boolean>;
+  resolveConfirm: (ok: boolean) => void;
   setAutoSave: (enabled: boolean) => void;
   setFontSize: (size: number) => void;
   setEditorWidth: (width: UiState["editorWidth"]) => void;
@@ -190,6 +205,7 @@ export const useUi = create<UiState>((set, get) => ({
   imageInsertOpen: false,
   tablePickerPos: null,
   toasts: [],
+  confirmDialog: null,
   autoSave: true,
   fontSize: 16,
   editorWidth: "standard",
@@ -253,6 +269,18 @@ export const useUi = create<UiState>((set, get) => ({
     setTimeout(() => get().dismissToast(id), action ? 8000 : 3600);
   },
   dismissToast: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  confirm: (opts) =>
+    new Promise<boolean>((resolve) => {
+      const prev = get().confirmDialog;
+      if (prev) prev.resolve(false);
+      set({ confirmDialog: { ...opts, resolve } });
+    }),
+  resolveConfirm: (ok) => {
+    const dlg = get().confirmDialog;
+    if (!dlg) return;
+    set({ confirmDialog: null });
+    dlg.resolve(ok);
+  },
 
   setAutoSave: (enabled) => {
     set({ autoSave: enabled });

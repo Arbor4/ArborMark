@@ -18,7 +18,8 @@ import { cursor } from "@milkdown/plugin-cursor";
 import { math, katexOptionsCtx, remarkMathPlugin } from "@milkdown/plugin-math";
 import { diagram, mermaidConfigCtx } from "@milkdown/plugin-diagram";
 import { nord } from "@milkdown/theme-nord";
-import { replaceAll } from "@milkdown/utils";
+import { replaceAll, $prose } from "@milkdown/utils";
+import { Plugin, TextSelection } from "@milkdown/prose/state";
 import { mermaidNodeView } from "./milkdownDiagrams";
 import { flowSequencePlugins } from "./milkdownFlowSequence";
 import { tocPlugin } from "./milkdownToc";
@@ -31,16 +32,16 @@ import { codeBlockNodeView, codeHighlightPlugin, codeBlockEscapePlugin, placeBlo
 import { imageView } from "./milkdownImage";
 import { anchorPlugin } from "./milkdownAnchors";
 import { flashPlugin } from "./milkdownFlash";
-import { findPlugin, refreshFind } from "./findSync";
+import { findPlugin, refreshFind } from "../findSync";
 import { pasteCaretPlugin } from "./milkdownPaste";
-import { captureFromMilkdown, applyToMilkdown } from "./editorViewSync";
-import { attachImageHandlers } from "./imageInsert";
+import { captureFromMilkdown, applyToMilkdown } from "../editorViewSync";
+import { attachImageHandlers } from "../imageInsert";
 import { tableNodeView } from "./milkdownTable";
 import { taskListNodeView } from "./milkdownTaskList";
 import { useWorkspace } from "@/stores/workspace";
 import { useUi, EDITOR_WIDTHS } from "@/stores/ui";
 import { t } from "@/bridge/i18n";
-import { setActiveEditor, onUserEdit } from "./activeEditor";
+import { setActiveEditor, onUserEdit } from "../activeEditor";
 import "@milkdown/theme-nord/style.css";
 import "katex/dist/katex.min.css";
 
@@ -49,6 +50,61 @@ export function syntaxSignature(prefs: Record<string, boolean | string | number>
   const keys = ["enableHighlight", "enableSuperscript", "enableSubscript", "enableAlert", "enableDiagram", "enableEmoji", "blockHTML", "enableInlineMath", "preserveLineBreak"];
   return keys.map((k) => `${k}=${prefs[k] ?? "def"}`).join("|");
 }
+
+/**
+ * 右键选区保护：macOS WKWebView 两指轻点 / 右键在空行上触发 contextmenu 时，
+ * 系统会在 mousedown 阶段自动扩展选区覆盖空行及下一行首。
+ * 当右击位置不在已有非空选区内时，阻止默认选区扩展并将光标折叠到点击处。
+ */
+const rightClickGuardPlugin = $prose(() => {
+  let collapseNextContextMenu = false;
+  let lastClickCoords: { left: number; top: number } | null = null;
+  let lastClickAt = 0;
+
+  return new Plugin({
+    props: {
+      handleDOMEvents: {
+        mousedown: (view, event) => {
+          const isContextClick = event.button === 2 || (event.button === 0 && event.ctrlKey);
+          if (!isContextClick) {
+            collapseNextContextMenu = false;
+            return false;
+          }
+          const coords = { left: event.clientX, top: event.clientY };
+          const hit = view.posAtCoords(coords);
+          const { selection, doc } = view.state;
+          const insideExisting =
+            !selection.empty && hit != null && hit.pos >= selection.from && hit.pos <= selection.to;
+          collapseNextContextMenu = !insideExisting;
+          lastClickCoords = coords;
+          lastClickAt = Date.now();
+          event.preventDefault();
+          if (!insideExisting && hit != null) {
+            const tr = view.state.tr.setSelection(TextSelection.near(doc.resolve(hit.pos)));
+            view.dispatch(tr.setMeta("addToHistory", false));
+          }
+          view.focus();
+          return false;
+        },
+        contextmenu: (view, event) => {
+          if (!collapseNextContextMenu || Date.now() - lastClickAt > 1000) return false;
+          collapseNextContextMenu = false;
+          const { selection, doc } = view.state;
+          const domSel = document.getSelection();
+          if (!selection.empty || (domSel && !domSel.isCollapsed && view.dom.contains(domSel.anchorNode))) {
+            const coords = lastClickCoords ?? { left: event.clientX, top: event.clientY };
+            const hit = view.posAtCoords(coords);
+            const target = hit ? hit.pos : selection.from;
+            const tr = view.state.tr.setSelection(TextSelection.near(doc.resolve(target)));
+            view.dispatch(tr.setMeta("addToHistory", false));
+            view.focus();
+          }
+          return false;
+        },
+      },
+    },
+  });
+});
 
 export function MilkdownEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -229,6 +285,7 @@ export function MilkdownEditor() {
       .use(history)
       .use(clipboard)
       .use(pasteCaretPlugin)
+      .use(rightClickGuardPlugin)
       .use(cursor)
       .use(math)
       .use(buildSyntaxPlugins(prefs))
@@ -460,6 +517,7 @@ export function MilkdownEditor() {
     const scroller = host?.parentElement;
     if (!host || !scroller) return;
     const onBlank = (e: MouseEvent) => {
+      if (e.button !== 0 || e.ctrlKey) return;
       const t = e.target as HTMLElement;
       if (t.closest("button, input, textarea, a, summary, .am-table-toolbar")) return;
       const ed = editorRef.current;

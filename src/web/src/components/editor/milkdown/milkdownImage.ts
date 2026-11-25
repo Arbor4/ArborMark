@@ -11,7 +11,7 @@ import { useLightbox } from "@/stores/lightbox";
 import { useWorkspace } from "@/stores/workspace";
 import { pathUtil } from "@/bridge/fs";
 import { t } from "@/bridge/i18n";
-import { resolveImageSrcAsync, MAGNIFIER_SVG } from "./imageSrc";
+import { resolveImageSrcAsync, MAGNIFIER_SVG } from "../imageSrc";
 
 export const imageView = $view(imageSchema.node, () => (initialNode, view: EditorView, getPos) => {
   let node: ProseNode = initialNode;
@@ -114,6 +114,9 @@ export const imageView = $view(imageSchema.node, () => (initialNode, view: Edito
     img.alt = alt;
     img.loading = "lazy";
     img.draggable = false;
+    const viewport = document.createElement("span");
+    viewport.className = "am-image-viewport";
+    viewport.appendChild(img);
     resolveImageSrcAsync(src).then((u) => { img.src = u; });
     img.addEventListener("error", () => {
       dom.classList.add("am-image-broken");
@@ -125,12 +128,13 @@ export const imageView = $view(imageSchema.node, () => (initialNode, view: Edito
       dom.appendChild(makeZoomBtn());
     });
     img.addEventListener("load", () => {
-      // 超长图（高/宽比大）在编辑区内限高滚动，避免撑爆文档布局
+      // 超长图（高/宽比大）在内部视口限高滚动，保持外层工具条与缩放手柄固定可见
       if (img.naturalWidth > 0 && img.naturalHeight / img.naturalWidth > 2.5) {
-        dom.classList.add("am-image-tall", "am-img-scroll");
+        dom.classList.add("am-image-tall");
+        viewport.classList.add("am-img-scroll");
       }
     });
-    dom.appendChild(img);
+    dom.appendChild(viewport);
 
     // 悬浮工具条：对齐（左/中/右）+ 放大查看
     const tools = document.createElement("span");

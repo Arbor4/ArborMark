@@ -36,6 +36,30 @@ function toAbsolute(decoded: string): string {
 export const MAGNIFIER_SVG =
   '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>';
 
+/** 创建悬浮放大查看按钮（图表 / 公式块共用，悬停显现并拦截编辑态焦点切换）。 */
+export function createZoomButton(label: string, onOpen: () => void): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "am-image-zoom am-block-zoom";
+  b.innerHTML = MAGNIFIER_SVG;
+  b.title = label;
+  b.setAttribute("aria-label", label);
+  b.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  b.addEventListener("dblclick", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  b.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onOpen();
+  });
+  return b;
+}
+
 export const MIN_VIEW_SCALE = 0.05;
 export const MAX_VIEW_SCALE = 12;
 

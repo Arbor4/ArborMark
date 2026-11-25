@@ -1,8 +1,9 @@
 import { create } from "zustand";
 import { fs, pathUtil, type FsEntry } from "@/bridge/fs";
+import { t } from "@/bridge/i18n";
 import { isTauri } from "@/bridge/ipc";
 import { MOCK_ROOT } from "@/bridge/mockFs";
-import { getPreviewKind } from "@/components/editor/codeLanguage";
+import { getPreviewKind } from "@/components/editor/codemirror/codeLanguage";
 import { useUi } from "./ui";
 
 export interface TreeNode {
@@ -31,6 +32,10 @@ interface WorkspaceState {
   activePath: string | null;
   content: string;
   savedContent: string;
+  /** 磁盘上的原始文件内容与元数据快照（独立于编辑器规范化基线 savedContent，避免 CRLF/格式化差异触发误重载） */
+  diskContent: string;
+  diskMtime: number;
+  diskSize: number;
   dirty: boolean;
   reloadToken: number;
   loading: boolean;
@@ -51,7 +56,7 @@ interface WorkspaceState {
   openHelp: (name: string, content: string) => void;
   setContent: (text: string) => void;
   setBaseline: (text: string) => void;
-  reloadDocument: (text?: string) => Promise<boolean>;
+  reloadDocument: (text?: string, stat?: { mtime?: number; size?: number }) => Promise<boolean>;
   reloadFromDisk: () => Promise<boolean>;
   save: () => Promise<boolean>;
   createFile: (parentDir: string, name?: string) => Promise<string | null>;
@@ -180,6 +185,8 @@ const HEAVY_DIRS = new Set(["node_modules", "dist", "target", "build", "out", "r
 let autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
 let savePromise: Promise<boolean> | null = null;
 let saveQueued = false;
+let externalCheckPromise: Promise<void> | null = null;
+let lastExternalCheckAt = 0;
 
 export const useWorkspace = create<WorkspaceState>((set, get) => ({
   rootPath: "",
@@ -191,6 +198,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   activePath: null,
   content: "",
   savedContent: "",
+  diskContent: "",
+  diskMtime: 0,
+  diskSize: 0,
   dirty: false,
   reloadToken: 0,
   loading: false,
@@ -222,6 +232,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         activePath: null,
         content: "",
         savedContent: "",
+        diskContent: "",
+        diskMtime: 0,
+        diskSize: 0,
         dirty: false,
         loading: false,
       });
@@ -423,13 +436,28 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       // 图片/PDF/音视频/不支持的二进制：不读文本（避免乱码与大文件内存浪费），
       // 由 EditorArea 按扩展名路由到对应预览视图。
       if (getPreviewKind(pathUtil.name(path))) {
-        set({ activePath: path, content: "", savedContent: "", dirty: false, error: null });
+        set({
+          activePath: path,
+          content: "",
+          savedContent: "",
+          diskContent: "",
+          diskMtime: 0,
+          diskSize: 0,
+          dirty: false,
+          error: null,
+        });
       } else {
-        const content = await fs.readFile(path);
+        const [content, st] = await Promise.all([
+          fs.readFile(path),
+          fs.stat(path).catch(() => null),
+        ]);
         set({
           activePath: path,
           content,
           savedContent: content,
+          diskContent: content,
+          diskMtime: st?.mtime ?? 0,
+          diskSize: st?.size ?? content.length,
           dirty: false,
           error: null,
         });
@@ -459,7 +487,16 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   // 内置帮助文档：只读虚拟文档（help:// 前缀），不落盘、不进入文件树。
   openHelp: (name, content) => {
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    set({ activePath: `help://${name}`, content, savedContent: content, dirty: false, error: null });
+    set({
+      activePath: `help://${name}`,
+      content,
+      savedContent: content,
+      diskContent: "",
+      diskMtime: 0,
+      diskSize: 0,
+      dirty: false,
+      error: null,
+    });
   },
 
   setContent: (text) => {
@@ -482,22 +519,37 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
 
   // 从外部或磁盘全量重载文档：递增 reloadToken 强行同步底层富文本/源码编辑器
-  reloadDocument: async (text?: string) => {
+  reloadDocument: async (text?: string, stat?: { mtime?: number; size?: number }) => {
     const { activePath } = get();
     if (!activePath || activePath.startsWith("help://")) return false;
     let nextContent = text;
+    let nextMtime = stat?.mtime;
+    let nextSize = stat?.size;
     if (nextContent === undefined) {
       try {
-        nextContent = await fs.readFile(activePath);
+        const [diskText, st] = await Promise.all([
+          fs.readFile(activePath),
+          fs.stat(activePath).catch(() => null),
+        ]);
+        nextContent = diskText;
+        nextMtime = st?.mtime ?? 0;
+        nextSize = st?.size ?? diskText.length;
       } catch (err) {
         console.error("reloadDocument readFile error", err);
         return false;
       }
+    } else if (nextMtime === undefined || nextSize === undefined) {
+      const st = await fs.stat(activePath).catch(() => null);
+      nextMtime = nextMtime ?? st?.mtime ?? 0;
+      nextSize = nextSize ?? st?.size ?? nextContent.length;
     }
     if (autoSaveTimer) clearTimeout(autoSaveTimer);
     set((s) => ({
       content: nextContent,
       savedContent: nextContent,
+      diskContent: nextContent,
+      diskMtime: nextMtime ?? 0,
+      diskSize: nextSize ?? nextContent.length,
       dirty: false,
       reloadToken: s.reloadToken + 1,
     }));
@@ -529,11 +581,30 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
           out = out.replace(/\r?\n/g, "\r\n");
         }
         await fs.writeFile(activePath, out);
+        const st = await fs.stat(activePath).catch(() => null);
+        const diskMtime = st?.mtime ?? get().diskMtime;
+        const diskSize = st?.size ?? out.length;
+        // 内存编辑态统一以 LF 为基线（避免 CodeMirror / Milkdown 的 \n 序列化与 CRLF 落盘串产生假差异）；
+        // 仅磁盘快照 diskContent 保留真实落盘文本（含 \r\n）。
+        const editorBaseline = eol === "crlf" ? out.replace(/\r\n/g, "\n") : out;
         const currentContent = get().content;
-        if (currentContent === content || currentContent === out) {
-          set({ content: out, savedContent: out, dirty: false });
+        if (currentContent === content || currentContent === editorBaseline) {
+          set({
+            content: editorBaseline,
+            savedContent: editorBaseline,
+            diskContent: out,
+            diskMtime,
+            diskSize,
+            dirty: false,
+          });
         } else {
-          set({ savedContent: out, dirty: true });
+          set({
+            savedContent: editorBaseline,
+            diskContent: out,
+            diskMtime,
+            diskSize,
+            dirty: true,
+          });
         }
         return true;
       } catch (err) {
@@ -623,7 +694,7 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       selected: new Set([...selected].filter((p) => !gone(p))),
       expanded: new Set([...expanded].filter((p) => !gone(p))),
       ...(activePath && gone(activePath)
-        ? { activePath: null, content: "", savedContent: "", dirty: false }
+        ? { activePath: null, content: "", savedContent: "", diskContent: "", diskMtime: 0, diskSize: 0, dirty: false }
         : {}),
     });
     await get().refresh();
@@ -734,27 +805,71 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
   },
 
   checkExternalChange: async () => {
-    const { activePath, savedContent, dirty } = get();
-    if (!activePath || activePath.startsWith("help://")) return;
-    try {
-      const diskText = await fs.readFile(activePath);
-      if (diskText === savedContent) return;
+    if (externalCheckPromise) return externalCheckPromise;
+    const now = performance.now();
+    if (now - lastExternalCheckAt < 300) return;
+    lastExternalCheckAt = now;
 
-      if (!dirty) {
-        await get().reloadDocument(diskText);
-        useUi.getState().toast("文件已被外部修改，已自动重新加载", "info");
-      } else {
-        const ok = window.confirm(
-          `文件「${pathUtil.name(activePath)}」在磁盘上已被外部程序修改。\n\n是否从磁盘重新加载最新内容？\n（选择“确定”丢弃当前未保存内容并重载；选择“取消”保留当前编辑）`
-        );
-        if (ok) {
-          await get().reloadDocument(diskText);
-          useUi.getState().toast("已重新加载磁盘最新版本", "success");
-        }
+    const run = async () => {
+      const { activePath, diskContent, diskMtime, diskSize, dirty } = get();
+      if (
+        !activePath ||
+        activePath.startsWith("help://") ||
+        getPreviewKind(pathUtil.name(activePath)) ||
+        savePromise !== null
+      ) {
+        return;
       }
-    } catch {
-      /* 外部删除或无权限，静默跳过 */
-    }
+      try {
+        const st = await fs.stat(activePath);
+        if (!st?.exists || st.isDir) return;
+        if (get().activePath !== activePath || savePromise !== null) return;
+
+        // 优先比对磁盘 mtime 与文件大小：Windows 拖动/聚焦窗口会高频触发 focus，元数据未变直接跳过
+        if (diskMtime > 0 && st.mtime === diskMtime && st.size === diskSize) {
+          return;
+        }
+
+        const diskText = await fs.readFile(activePath);
+        if (get().activePath !== activePath || savePromise !== null) return;
+
+        // 与磁盘原始文本（diskContent）比对，避免因 CRLF 换行或编辑器规范化序列化造成误判
+        if (diskText === diskContent) {
+          set({ diskMtime: st.mtime, diskSize: st.size });
+          return;
+        }
+
+        if (!dirty) {
+          await get().reloadDocument(diskText, { mtime: st.mtime, size: st.size });
+          useUi.getState().toast(t("文件已被外部修改，已自动重新加载"), "info");
+        } else {
+          const ok = await useUi.getState().confirm({
+            title: t("文件已被外部修改"),
+            message: t(
+              "文件「{name}」在磁盘上已被外部程序修改。\n\n是否从磁盘重新加载最新内容？\n（选择“确定”丢弃当前未保存内容并重载；选择“取消”保留当前编辑）",
+              { name: pathUtil.name(activePath) },
+            ),
+            confirmText: t("从磁盘重载"),
+            cancelText: t("保留当前编辑"),
+            danger: true,
+          });
+          if (ok) {
+            await get().reloadDocument(diskText, { mtime: st.mtime, size: st.size });
+            useUi.getState().toast(t("已重新加载磁盘最新版本"), "success");
+          } else {
+            // 用户明确选择保留当前编辑，同步记录当前磁盘快照以免下次聚焦继续重复弹窗
+            set({ diskContent: diskText, diskMtime: st.mtime, diskSize: st.size });
+          }
+        }
+      } catch {
+        /* 外部删除或无权限，静默跳过 */
+      }
+    };
+
+    externalCheckPromise = run().finally(() => {
+      externalCheckPromise = null;
+    });
+    return externalCheckPromise;
   },
 }));
 

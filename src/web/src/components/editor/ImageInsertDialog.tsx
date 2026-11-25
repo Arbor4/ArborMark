@@ -75,13 +75,14 @@ export function ImageInsertDialog({ open, onClose }: { open: boolean; onClose: (
 
   return (
     <Modal open={open} onClose={onClose} width={520} labelledBy="img-insert-title">
-      <div className="p-5">
-        <div className="mb-4 flex items-center justify-between">
+      <div className="flex max-h-[86vh] flex-col">
+        <div className="flex shrink-0 items-center justify-between px-5 pt-5 pb-3">
           <h2 id="img-insert-title" className="flex items-center gap-2 text-[15px] font-semibold text-ink">
-            <ImagePlus size={16} className="text-accent" /> 插入图片
+            <ImagePlus size={16} className="text-accent" /> {t("插入图片")}
           </h2>
           <button aria-label={t("关闭")} onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-md text-ink-muted hover:bg-hover hover:text-ink"><X size={15} /></button>
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5">
         <div className="mb-4 flex gap-1 rounded-lg bg-hover p-1">
           {tab("file", t("本地文件"), <Upload size={13} />)}
           {tab("path", t("路径 / URL"), <Link2 size={13} />)}
@@ -139,6 +140,7 @@ export function ImageInsertDialog({ open, onClose }: { open: boolean; onClose: (
           >
             {t("插入")}
           </button>
+        </div>
         </div>
       </div>
     </Modal>

@@ -138,11 +138,11 @@ export function OutlinePanel() {
               : "text-ink-secondary hover:bg-hover hover:text-ink"
           }`}
           style={{ paddingLeft: 4 + depth * 14 }}
-          title={`第 ${node.item.line} 行`}
+          title={node.item.text}
         >
           <button
             data-chevron="true"
-            aria-label={isCollapsed ? "展开" : "折叠"}
+            aria-label={isCollapsed ? t("展开") : t("折叠")}
             onClick={(e) => {
               e.stopPropagation();
               if (hasChildren) toggle(id);
@@ -153,11 +153,8 @@ export function OutlinePanel() {
           >
             <ChevronRight size={11} />
           </button>
-          <div className="flex min-w-0 flex-1 items-center gap-1 text-left select-none">
+          <div className="flex min-w-0 flex-1 items-center text-left select-none">
             <span className={`truncate ${depth <= 1 || isActive ? "font-medium" : ""} ${isActive ? "text-accent" : depth <= 1 ? "text-ink" : ""}`}>{node.item.text}</span>
-            <span className="ml-auto shrink-0 text-[10px] tabular-nums text-ink-muted opacity-0 transition-opacity group-hover:opacity-70">
-              {node.item.line}
-            </span>
           </div>
         </div>
         {hasChildren && !isCollapsed && node.children.map((c) => renderNode(c, depth + 1))}

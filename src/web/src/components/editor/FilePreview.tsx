@@ -11,7 +11,7 @@ import { useUi } from "@/stores/ui";
 import { invoke, isTauri } from "@/bridge/ipc";
 import { pathUtil } from "@/bridge/fs";
 import { resolveImageSrcAsync, initialImageView, wholeFitScale, MIN_VIEW_SCALE, MAX_VIEW_SCALE } from "./imageSrc";
-import type { PreviewKind } from "./codeLanguage";
+import type { PreviewKind } from "./codemirror/codeLanguage";
 import { useLang } from "@/bridge/i18n";
 
 const btn =

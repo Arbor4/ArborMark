@@ -9,7 +9,7 @@ import { tableSchema } from "@milkdown/preset-gfm";
 import { TextSelection } from "@milkdown/prose/state";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
-import { attachFastTooltip } from "./domTooltip";
+import { attachFastTooltip } from "../domTooltip";
 import {
   type TableCommand,
   type Alignment,
@@ -25,7 +25,7 @@ import {
   alignColumn,
   currentAlignment,
   inHeaderRow,
-} from "./tableOps";
+} from "../tableOps";
 
 const ICONS: Record<string, string> = {
   rowAbove: "M3 12.5h10M8 9.5V3M5.5 5.5L8 3l2.5 2.5",

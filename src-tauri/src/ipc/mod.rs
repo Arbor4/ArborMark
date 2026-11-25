@@ -297,7 +297,7 @@ pub async fn ipc_invoke(
         "setting.getUserDict" => setting::get_user_dict(),
         "setting.getUserDictionaryPath" => setting::get_user_dictionary_path(),
         "setting.getUnsavedDraftsPath" => setting::get_unsaved_drafts_path(),
-        "setting.checkUpdates" => misc::check_for_updates(),
+        "setting.checkUpdates" => misc::check_for_updates().await,
         "setting.resetAllDialogWarnings" => setting::reset_plain(&state, &["noHintForOpenLink"]),
         "setting.resetAdvancedSettings" => setting::reset_plain(&state, &[]),
         "setting.downloadDict" => setting::download_dict(&app, &payload),
@@ -324,7 +324,7 @@ pub async fn ipc_invoke(
         "sendLog" => misc::log_message("info", &payload),
         "addBackup" => misc::log_message("info", &payload),
         "app.log" => misc::log_message("info", &payload),
-        "updater.checkForUpdates" => misc::check_for_updates(),
+        "updater.checkForUpdates" => misc::check_for_updates().await,
         "quit" => {
             let windows = app.webview_windows();
             if windows.is_empty() {

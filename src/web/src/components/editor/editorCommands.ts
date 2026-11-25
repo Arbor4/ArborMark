@@ -11,11 +11,11 @@ import { TextSelection } from "@milkdown/prose/state";
 import type { EditorView as PMView } from "@milkdown/prose/view";
 import type { Schema, Node as PMNode } from "@milkdown/prose/model";
 import { addRowAfter, addRowBefore, addColumnAfter, addColumnBefore, deleteRow, deleteColumn, deleteTable } from "prosemirror-tables";
-import { getEditorView } from "./EditorHost";
+import { getEditorView } from "./codemirror/EditorHost";
 import { getMilkdown } from "./activeEditor";
 import { useUi } from "@/stores/ui";
 import { insertAtCursor, wrapSelectionForToolbar, toggleLinePrefixForToolbar } from "./toolbarActions";
-import { toolbar } from "./toolbarCommands";
+import { toolbar, convertSelectionToCodeBlock, dispatchBlockInsert } from "./toolbarCommands";
 
 function cm(): EditorView | null {
   return getEditorView();
@@ -28,7 +28,9 @@ function pm<T>(fn: (view: PMView, schema: Schema) => T): T | undefined {
 function pmDo(fn: (view: PMView, schema: Schema) => boolean): boolean {
   return pm((v, s) => {
     const ok = fn(v, s);
-    if (ok) v.focus();
+    const active = document.activeElement;
+    const inInnerEditor = active instanceof HTMLElement && v.dom.contains(active) && active !== v.dom;
+    if (ok && !inInnerEditor) v.focus();
     return ok;
   }) ?? false;
 }
@@ -331,7 +333,7 @@ export const stylize = {
         v.dispatch(v.state.tr.replaceWith(inside.pos, inside.pos + inside.node.nodeSize, para));
         return true;
       }
-      return run(setBlockType(schema.nodes.code_block))(v);
+      return convertSelectionToCodeBlock(v, schema);
     })) return;
     toolbar.codeBlock();
   },
@@ -348,7 +350,7 @@ export const stylize = {
       }
       const { from, to, empty } = v.state.selection;
       const value = empty ? "" : v.state.doc.textBetween(from, to);
-      v.dispatch(v.state.tr.replaceSelectionWith(type.create({ value })));
+      dispatchBlockInsert(v, schema, type.create({ value }), true);
       return true;
     })) return;
     const v = cm(); if (!v) return;

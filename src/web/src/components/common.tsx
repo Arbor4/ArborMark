@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useUi } from "@/stores/ui";
+import { useLang } from "@/bridge/i18n";
 import { CheckCircle2, AlertTriangle, Info, XCircle, X, ChevronRight } from "lucide-react";
 
 /* ── Tooltip：轻量提示，hover 400ms 后出现 ─────────────────────────────────── */
@@ -39,8 +40,19 @@ export function Tooltip({
     setShow(false);
   };
 
+  useEffect(() => {
+    if (!show) return;
+    const hide = () => setShow(false);
+    window.addEventListener("scroll", hide, true);
+    window.addEventListener("blur", hide);
+    return () => {
+      window.removeEventListener("scroll", hide, true);
+      window.removeEventListener("blur", hide);
+    };
+  }, [show]);
+
   return (
-    <span ref={ref} onMouseEnter={enter} onMouseLeave={leave} className="inline-flex">
+    <span ref={ref} onMouseEnter={enter} onMouseLeave={leave} onMouseDown={leave} className="inline-flex">
       {children}
       {show &&
         createPortal(
@@ -115,7 +127,10 @@ export function ContextMenu({
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) onClose();
     };
-    const onScroll = () => onClose();
+    const onScroll = (e: Event) => {
+      if (ref.current && e.target instanceof Node && ref.current.contains(e.target)) return;
+      onClose();
+    };
     window.addEventListener("keydown", onKey);
     window.addEventListener("mousedown", onDown);
     window.addEventListener("scroll", onScroll, true);
@@ -279,6 +294,7 @@ const TOAST_ICONS = {
 };
 
 export function Toasts() {
+  const { t: tr } = useLang();
   const toasts = useUi((s) => s.toasts);
   const dismiss = useUi((s) => s.dismissToast);
   return createPortal(
@@ -303,7 +319,7 @@ export function Toasts() {
             </button>
           )}
           <button
-            aria-label="关闭通知"
+            aria-label={tr("关闭通知")}
             className="ml-0.5 rounded p-0.5 text-ink-muted hover:bg-hover hover:text-ink"
             onClick={() => dismiss(t.id)}
           >
@@ -313,6 +329,55 @@ export function Toasts() {
       ))}
     </div>,
     document.body,
+  );
+}
+
+/* ── 主题适配确认弹窗 ───────────────────────────────────────────────────────── */
+
+export function ConfirmDialog() {
+  const dlg = useUi((s) => s.confirmDialog);
+  const resolveConfirm = useUi((s) => s.resolveConfirm);
+  const { t } = useLang();
+
+  return (
+    <Modal open={!!dlg} onClose={() => resolveConfirm(false)} width={420} labelledBy="am-confirm-title">
+      {dlg && (
+        <div className="p-5">
+          <div className="flex items-start gap-3">
+            <span className={`mt-0.5 shrink-0 ${dlg.danger ? "text-danger" : "text-accent"}`}>
+              {dlg.danger ? <AlertTriangle size={18} /> : <Info size={18} />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 id="am-confirm-title" className="text-[14px] font-semibold text-ink">
+                {dlg.title || t("确认")}
+              </h3>
+              <p className="mt-2 max-h-[45vh] overflow-y-auto whitespace-pre-wrap break-words text-[12.5px] leading-relaxed text-ink-secondary">
+                {dlg.message}
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => resolveConfirm(false)}
+              className="h-7 rounded-md border border-line px-3 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+            >
+              {dlg.cancelText || t("取消")}
+            </button>
+            <button
+              type="button"
+              autoFocus
+              onClick={() => resolveConfirm(true)}
+              className={`h-7 rounded-md px-3 text-[12px] font-medium text-on-accent transition-colors ${
+                dlg.danger ? "bg-danger hover:opacity-90" : "bg-accent hover:bg-accent-hover"
+              }`}
+            >
+              {dlg.confirmText || t("确定")}
+            </button>
+          </div>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -361,8 +426,8 @@ export function Switch({
       }`}
     >
       <span
-        className={`absolute top-[2px] h-4 w-4 rounded-full bg-white shadow-sm transition-all duration-200 ${
-          checked ? "left-[18px]" : "left-[2px]"
+        className={`absolute top-[2px] h-4 w-4 rounded-full shadow-sm transition-all duration-200 ${
+          checked ? "left-[18px] bg-on-accent" : "left-[2px] bg-white"
         }`}
       />
     </button>
