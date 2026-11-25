@@ -3,7 +3,7 @@ import { t } from "@/bridge/i18n";
 import { invoke, isTauri } from "@/bridge/ipc";
 import { useUi } from "@/stores/ui";
 
-export const CURRENT_VERSION = "4.0.3";
+export const CURRENT_VERSION = "4.0.4";
 export const GITHUB_REPO = "Arbor4/ArborMark";
 
 export interface UpdateInfo {

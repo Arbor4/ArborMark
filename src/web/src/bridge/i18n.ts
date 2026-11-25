@@ -64,7 +64,7 @@ const zh: Record<string, string> = {
   "common.copied": "已复制", "common.copyFail": "复制失败", "common.saved": "已保存",
   "about.reopen": "重新打开欢迎引导", "about.celebrate": "撒花庆祝",
   "about.body": "轻量、现代的 Markdown 编辑器。所见即所得内核：Milkdown（ProseMirror）；源码：CodeMirror 6；渲染：KaTeX + highlight.js + Mermaid。主题系统完全开放，欢迎创作你自己的主题。",
-  "about.version": "版本 4.0.3 · Tauri 2 + React 19 + Milkdown / CodeMirror 6",
+  "about.version": "版本 4.0.4 · Tauri 2 + React 19 + Milkdown / CodeMirror 6",
   "link.text": "链接文字", "link.url": "链接地址", "link.title": "标题（可选）", "link.open": "打开", "link.apply": "应用", "link.unlink": "移除链接", "link.close": "关闭", "link.hint": "单击编辑链接 · ⌘/Ctrl+单击跳转",
   "theme.system": "跟随系统", "theme.light": "浅色模式", "theme.dark": "深色模式", "theme.switch": "点击切换",
 };
@@ -110,7 +110,7 @@ const en: Record<string, string> = {
   "common.copied": "Copied", "common.copyFail": "Copy failed", "common.saved": "Saved",
   "about.body": "A lightweight, modern Markdown editor. WYSIWYG core: Milkdown (ProseMirror); source: CodeMirror 6; rendering: markdown-it + KaTeX + highlight.js + Mermaid. Fully open theme system — create your own.",
   "about.reopen": "Reopen welcome guide", "about.celebrate": "Celebrate",
-  "about.version": "Version 4.0.3 · Tauri 2 + React 19 + Milkdown / CodeMirror 6",
+  "about.version": "Version 4.0.4 · Tauri 2 + React 19 + Milkdown / CodeMirror 6",
   "link.text": "Link text", "link.url": "URL", "link.title": "Title (optional)", "link.open": "Open", "link.apply": "Apply", "link.unlink": "Unlink", "link.close": "Close", "link.hint": "Click to edit link · ⌘/Ctrl+click to open",
   "theme.system": "Follow system", "theme.light": "Light mode", "theme.dark": "Dark mode", "theme.switch": "click to switch",
 };

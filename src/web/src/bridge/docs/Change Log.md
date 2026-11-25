@@ -1,5 +1,13 @@
 # 更新日志
 
+## 4.0.4
+
+- 更新检查落地：Rust 侧 curl 请求 GitHub Releases（含 Windows 企业网络 TLS 吊销检查兼容），浏览器环境回退前端 API。
+- 新增全局确认对话框（Promise 化），危险操作统一二次确认。
+- 编辑器重构：拆分 codemirror/ 与 milkdown/ 子模块；设置面板组件化；文件树行组件抽离。
+- 工作区、图片灯箱与全局搜索体验改进。
+- 历史迁移文档归档至 docs/archive。
+
 ## 4.0.3
 
 - 新增图片导出：文档离屏渲染为 PNG（SVG foreignObject 原生渲染链）。
