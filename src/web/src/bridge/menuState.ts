@@ -215,8 +215,8 @@ export function computeMenuStates(): States {
   put("Edit→Smart Punctuation→Smart Quotes", pref("smartQuotes", true));
   put("Edit→Smart Punctuation→Smart Dashes", pref("smartDashes", true));
   put("Edit→Smart Punctuation→Remap Unicode Punctuation on Parse", pref("remapPunctuation"));
-  put("Edit→Line Endings→Windows Line Endings (CRLF)", pref("useCRLF"));
-  put("Edit→Line Endings→Unix Line Endings (LF)", !pref("useCRLF"));
+  put("Edit→Line Endings→Windows Line Endings (CRLF)", prefs.defaultEol === "crlf" || pref("useCRLF"));
+  put("Edit→Line Endings→Unix Line Endings (LF)", prefs.defaultEol !== "crlf" && !pref("useCRLF"));
   put("Edit→Line Endings→Insert Final New Line On Save", pref("finalNewline", true));
   put("Edit→Whitespace and Line Breaks→Indent first line of paragraphs", pref("indentFirstLine"));
   put("Edit→Whitespace and Line Breaks→Preserve single line break", pref("preserveLineBreak"));

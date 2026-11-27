@@ -159,10 +159,12 @@ async function loadDir(path: string): Promise<TreeNode[]> {
   if (hit) return hit;
   let p = dirInflight.get(path);
   if (!p) {
+    const showHidden = useUi.getState().prefs.showHiddenFiles === true;
     p = fs
       .readDir(path)
       .then((entries) => {
-        const nodes = sortNodes(entries.map(toNode));
+        const visible = showHidden ? entries : entries.filter((e) => !e.name.startsWith("."));
+        const nodes = sortNodes(visible.map(toNode));
         dirCache.set(path, nodes);
         return nodes;
       })
@@ -251,8 +253,17 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       // （openPath 与本方法共用序列化队列）。此时不能再挂载最近目录，
       // 否则 openFolder 会清空刚打开的文档，表现为"文件闪一下变空白"。
       if (get().activePath) return;
-      // 偏好「启动时恢复上次会话」关闭时：保持空工作区，由引导界面接管。
-      if (!restoreSessionEnabled) return;
+      const prefs = useUi.getState().prefs;
+      const startupAction = String(prefs.startupAction ?? (restoreSessionEnabled ? "restore" : "blank"));
+      if (startupAction === "blank" || !restoreSessionEnabled) return;
+      if (startupAction === "folder" && typeof prefs.startupFolder === "string" && prefs.startupFolder.trim()) {
+        const targetDir = prefs.startupFolder.trim();
+        const st = await fs.stat(targetDir).catch(() => null);
+        if (st?.exists && st.isDir) {
+          await get().openFolder(targetDir);
+          return;
+        }
+      }
       try {
         const recent = await fs.recentFolders();
         const first = recent.folders?.[0];
@@ -424,8 +435,19 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       get().selectOnly(path);
       return;
     }
-    if (dirty && activePath) {
-      await get().save();
+    if (dirty && activePath && !activePath.startsWith("help://")) {
+      const autoSaveOnSwitch = useUi.getState().prefs.autoSaveOnSwitch !== false;
+      if (autoSaveOnSwitch) {
+        await get().save();
+      } else {
+        const shouldSave = await useUi.getState().confirm({
+          title: t("未保存的更改"),
+          message: t("当前文档有未保存的更改，切换前是否保存？"),
+          confirmText: t("保存并切换"),
+          cancelText: t("放弃更改"),
+        });
+        if (shouldSave) await get().save();
+      }
     }
     // 启动恢复/菜单直开文件时可能还没有工作区：挂载父目录，文件树才有上下文。
     if (!get().rootPath) {

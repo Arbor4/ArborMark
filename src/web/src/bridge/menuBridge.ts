@@ -143,6 +143,9 @@ async function doExport(opts: { type: string }) {
         const res = await invoke<any>(`export.${type}`, { path: ws().activePath, type });
         if (res) {
           const exportPath = typeof res === "string" ? res : ws().activePath ?? "";
+          if (exportPath && ui().prefs.exportOpenFolder !== false) {
+            void fs.showInFolder(exportPath);
+          }
           ui().toast(`已导出 ${type.toUpperCase()}`, "success", exportPath ? {
             label: "打开所在文件夹",
             run: () => fs.showInFolder(exportPath),
@@ -338,7 +341,7 @@ export function installMenuBridge() {
       if (p) ws().expandTo(p);
     },
     setLineEnding: (crlf: boolean) => {
-      ui().setPref("useCRLF", crlf);
+      ui().setPref("defaultEol", crlf ? "crlf" : "lf");
       const text = ws().content ?? "";
       const next = text.replace(/\r\n/g, "\n").replace(/\n/g, crlf ? "\r\n" : "\n");
       if (next !== text) ws().setContent(next);

@@ -87,9 +87,13 @@ const LS_KEY = "arbor.ui";
 
 export const DEFAULT_PREFS: Record<string, boolean | string | number> = {
   // 文件与启动
+  startupAction: "restore",
+  startupFolder: "",
   defaultFileExt: "md",
   defaultEol: "lf",
   autoSaveOnSwitch: true,
+  outlineCollapsible: true,
+  showHiddenFiles: false,
   // 语法与标点
   smartQuotes: true,
   smartDashes: true,
@@ -130,6 +134,9 @@ export const DEFAULT_PREFS: Record<string, boolean | string | number> = {
   imgYamlUpload: false,
   imgAddDotSlash: false,
   imgCustomPath: "",
+  imgBase: "doc",
+  imgNamePattern: "original",
+  imgAltFromName: true,
   // 导出与状态
   exportOpenFolder: true,
   statusMetric: "words",
@@ -152,8 +159,15 @@ function loadPersisted(): Partial<UiState> {
       editorWidth: parsed.editorWidth ?? "standard",
       typewriterMode: parsed.typewriterMode ?? false,
     };
-    // 旧版本持久化可能缺 prefs：与 DEFAULT_PREFS 合并
-    persisted.prefs = { ...DEFAULT_PREFS, ...(parsed.prefs ?? {}) };
+    // 旧版本持久化可能缺 prefs：与 DEFAULT_PREFS 合并；并兼容 restoreSession → startupAction
+    const mergedPrefs: Record<string, boolean | string | number> = {
+      ...DEFAULT_PREFS,
+      ...(parsed.prefs ?? {}),
+    };
+    if (parsed.prefs?.startupAction === undefined && parsed.prefs?.restoreSession !== undefined) {
+      mergedPrefs.startupAction = parsed.prefs.restoreSession === false ? "blank" : "restore";
+    }
+    persisted.prefs = mergedPrefs;
     return persisted;
   } catch {
     return {};
@@ -199,7 +213,7 @@ export const useUi = create<UiState>((set, get) => ({
   typewriterMode: false,
   lineNumbers: false,
   settingsOpen: false,
-  settingsTab: "appearance",
+  settingsTab: "file",
   quickOpenOpen: false,
   globalSearchOpen: false,
   imageInsertOpen: false,
@@ -302,7 +316,19 @@ export const useUi = create<UiState>((set, get) => ({
   toggleWordCount: () => set((s) => ({ wordCountVisible: !s.wordCountVisible })),
   toggleReadonly: () => set((s) => ({ readonlyMode: !s.readonlyMode })),
   setPref: (key, value) => {
-    set((s) => ({ prefs: { ...s.prefs, [key]: value } }));
+    set((s) => {
+      const next = { ...s.prefs, [key]: value };
+      if (key === "startupAction") {
+        next.restoreSession = value !== "blank";
+      } else if (key === "restoreSession") {
+        next.startupAction = value === false ? "blank" : "restore";
+      } else if (key === "defaultEol") {
+        next.useCRLF = value === "crlf";
+      } else if (key === "useCRLF") {
+        next.defaultEol = value ? "crlf" : "lf";
+      }
+      return { prefs: next };
+    });
     persist(get());
   },
   resetPrefs: () => {

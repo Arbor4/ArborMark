@@ -24,7 +24,7 @@ import { mermaidNodeView } from "./milkdownDiagrams";
 import { flowSequencePlugins } from "./milkdownFlowSequence";
 import { tocPlugin } from "./milkdownToc";
 import { emojiPlugin } from "./milkdownEmoji";
-import { buildSyntaxPlugins, syntaxStringifyHandlers, normalizeMarkdown, eastAsianWidth } from "./milkdownSyntax";
+import { buildSyntaxPlugins, syntaxStringifyHandlers, normalizeMarkdown, eastAsianWidth, type BulletMarker } from "./milkdownSyntax";
 import { blankLinesRemark, joinEmptyParagraph, docPreserveTrailing } from "./milkdownBlankLines";
 import { htmlPlugins, detailsPlugins, emptyDocNormalize, htmlRemark } from "./milkdownHtml";
 import { mathViews } from "./milkdownMath";
@@ -47,7 +47,7 @@ import "katex/dist/katex.min.css";
 
 /** 语法扩展签名：变更时触发编辑器重挂载。 */
 export function syntaxSignature(prefs: Record<string, boolean | string | number>): string {
-  const keys = ["enableHighlight", "enableSuperscript", "enableSubscript", "enableAlert", "enableDiagram", "enableEmoji", "blockHTML", "enableInlineMath", "preserveLineBreak"];
+  const keys = ["enableHighlight", "enableSuperscript", "enableSubscript", "enableAlert", "enableDiagram", "enableEmoji", "blockHTML", "enableInlineMath", "preserveLineBreak", "unorderedListMarker"];
   return keys.map((k) => `${k}=${prefs[k] ?? "def"}`).join("|");
 }
 
@@ -120,6 +120,10 @@ export function MilkdownEditor() {
   const isComposingRef = useRef(false);
 
   // 立即将挂起的 Markdown 序列化写入全局 Workspace，保证保存、失焦、切换时零数据丢失
+  const currentBullet = (): BulletMarker => {
+    const m = String(useUi.getState().prefs.unorderedListMarker ?? "-");
+    return m === "*" || m === "+" ? m : "-";
+  };
   const flushPendingSync = () => {
     if (syncTimerRef.current) {
       clearTimeout(syncTimerRef.current);
@@ -128,7 +132,7 @@ export function MilkdownEditor() {
     if (pendingMarkdownRef.current !== null) {
       const raw = pendingMarkdownRef.current;
       pendingMarkdownRef.current = null;
-      const normalized = normalizeMarkdown(raw);
+      const normalized = normalizeMarkdown(raw, currentBullet());
       useWorkspace.getState().setContent(normalized);
       updateEmptyHint();
     }
@@ -138,11 +142,14 @@ export function MilkdownEditor() {
   const content = useWorkspace((s) => s.content);
   const readonlyMode = useUi((s) => s.readonlyMode);
   const focusMode = useUi((s) => s.focusMode);
+  const typewriterMode = useUi((s) => s.typewriterMode);
   const fontSize = useUi((s) => s.fontSize);
   const editorWidth = useUi((s) => s.editorWidth);
   const indentFirstLine = useUi((s) => s.prefs.indentFirstLine);
   const lineWrapping = useUi((s) => s.prefs.lineWrapping);
   const spellcheck = useUi((s) => s.prefs.spellcheck);
+  const showLineNumbersForFence = useUi((s) => s.prefs.showLineNumbersForFence === true);
+  const autoNumberingForMath = useUi((s) => s.prefs.autoNumberingForMath === true);
 
   // 空文档占位提示：仅单个空段落且可编辑时显示
   const updateEmptyHint = () => {
@@ -219,11 +226,12 @@ export function MilkdownEditor() {
           listItemIndent?: string;
           incrementListMarker?: boolean;
         };
+        const bullet = currentBullet();
         ctx.set(remarkStringifyOptionsCtx, {
           ...opts,
           // 统一遵循主流 Markdown（CommonMark / GFM / Typora）标准：
-          bullet: "-",
-          bulletOther: "*",
+          bullet,
+          bulletOther: bullet === "*" ? "-" : "*",
           bulletOrdered: ".",
           rule: "-",
           ruleRepetition: 3,
@@ -241,7 +249,7 @@ export function MilkdownEditor() {
           // 加载期或用户尚未产生实际编辑交互时：规范化序列化仅回写为基线（绝不标 dirty，绝不触发自动保存）；
           // 仅在就绪且用户发生了真实输入或编辑交互后，才进入 setContent 标记 dirty。
           if (loadingRef.current || !userInteractedRef.current) {
-            const normalized = normalizeMarkdown(markdown);
+            const normalized = normalizeMarkdown(markdown, bullet);
             useWorkspace.getState().setBaseline(normalized);
             updateEmptyHint();
             return;
@@ -259,7 +267,7 @@ export function MilkdownEditor() {
             if (pendingMarkdownRef.current !== null) {
               const raw = pendingMarkdownRef.current;
               pendingMarkdownRef.current = null;
-              const normalized = normalizeMarkdown(raw);
+              const normalized = normalizeMarkdown(raw, bullet);
               useWorkspace.getState().setContent(normalized);
               updateEmptyHint();
             }
@@ -342,7 +350,7 @@ export function MilkdownEditor() {
         // 旧版 <br /> 占位等需立即规范化为纯空行基线。
         ed.action((ctx) => {
           const md = ctx.get(serializerCtx)(ctx.get(editorViewCtx).state.doc);
-          useWorkspace.getState().setBaseline(normalizeMarkdown(md));
+          useWorkspace.getState().setBaseline(normalizeMarkdown(md, currentBullet()));
         });
         updateEmptyHint();
         setTimeout(() => {
@@ -466,7 +474,7 @@ export function MilkdownEditor() {
     editor.action(replaceAll(content || ""));
     editor.action((ctx) => {
       const md = ctx.get(serializerCtx)(ctx.get(editorViewCtx).state.doc);
-      useWorkspace.getState().setBaseline(normalizeMarkdown(md));
+      useWorkspace.getState().setBaseline(normalizeMarkdown(md, currentBullet()));
     });
     updateEmptyHint();
 
@@ -502,6 +510,38 @@ export function MilkdownEditor() {
       ctx.get(editorViewCtx).dom.setAttribute("spellcheck", spellcheck ? "true" : "false");
     });
   }, [spellcheck]);
+
+  /* 打字机模式：光标所在行始终保持在视口垂直居中 */
+  useEffect(() => {
+    if (!typewriterMode) return;
+    const host = containerRef.current;
+    const scroller = host?.parentElement;
+    if (!host || !scroller) return;
+    const centerCaret = () => {
+      if (loadingRef.current) return;
+      const ed = editorRef.current;
+      if (!ed) return;
+      ed.action((ctx) => {
+        const view = ctx.get(editorViewCtx);
+        if (!view.hasFocus()) return;
+        const coords = view.coordsAtPos(view.state.selection.head);
+        const rect = scroller.getBoundingClientRect();
+        const mid = rect.top + rect.height / 2;
+        const delta = (coords.top + coords.bottom) / 2 - mid;
+        if (Math.abs(delta) > 4) {
+          scroller.scrollTop += delta;
+        }
+      });
+    };
+    const onSelection = () => requestAnimationFrame(centerCaret);
+    document.addEventListener("selectionchange", onSelection);
+    host.addEventListener("input", onSelection, true);
+    requestAnimationFrame(centerCaret);
+    return () => {
+      document.removeEventListener("selectionchange", onSelection);
+      host.removeEventListener("input", onSelection, true);
+    };
+  }, [typewriterMode]);
 
   /* 粘贴 / 拖拽图片：按「插入与路径」偏好落盘或 data URI 插入 */
   useEffect(() => {
@@ -539,7 +579,7 @@ export function MilkdownEditor() {
     <div className="absolute inset-0 overflow-y-auto bg-editor">
       <div
         ref={containerRef}
-        className={`am-milkdown-host mx-auto px-10 pt-10 pb-24 ${focusMode ? "am-focus-mode" : ""} ${indentFirstLine ? "am-indent-first" : ""} ${lineWrapping === false ? "am-no-wrap" : ""}`}
+        className={`am-milkdown-host mx-auto px-10 pt-10 pb-24 ${focusMode ? "am-focus-mode" : ""} ${indentFirstLine ? "am-indent-first" : ""} ${lineWrapping === false ? "am-no-wrap" : ""} ${showLineNumbersForFence ? "am-fence-linenos" : ""} ${autoNumberingForMath ? "am-math-numbered" : ""}`}
         style={{ maxWidth: EDITOR_WIDTHS[editorWidth], fontSize: `${fontSize}px` }}
         data-testid="milkdown-host"
       />

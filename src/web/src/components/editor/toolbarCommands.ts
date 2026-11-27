@@ -11,6 +11,7 @@ import type { EditorView } from "@milkdown/prose/view";
 import type { Schema, NodeType, Node as ProseNode } from "@milkdown/prose/model";
 import { getMilkdown, getCm6, notifyUserEdit } from "./activeEditor";
 import { wrapSelectionForToolbar, insertAtCursor, toggleLinePrefixForToolbar } from "./toolbarActions";
+import { useUi } from "@/stores/ui";
 
 type PMCommand = (state: any, dispatch?: any, view?: EditorView) => boolean;
 
@@ -128,6 +129,8 @@ function insertBlockNode(name: string, attrs?: Record<string, unknown>, autoEdit
 export function convertSelectionToCodeBlock(view: EditorView, schema: Schema): boolean {
   const codeBlock = schema.nodes.code_block;
   if (!codeBlock) return false;
+  const defaultLang = String(useUi.getState().prefs.defaultCodeLang ?? "").trim();
+  const attrs = defaultLang ? { language: defaultLang } : undefined;
   const { state } = view;
   const { from, to, $from, $to } = state.selection;
 
@@ -146,7 +149,7 @@ export function convertSelectionToCodeBlock(view: EditorView, schema: Schema): b
     const parent = $from.node($from.depth - 1);
     const idx = $from.index($from.depth - 1);
     if (parent.canReplaceWith(idx, idx + 1, codeBlock)) {
-      const tr = state.tr.setBlockType(from, endPos, codeBlock);
+      const tr = state.tr.setBlockType(from, endPos, codeBlock, attrs);
       const maxPos = tr.doc.content.size;
       tr.setSelection(TextSelection.create(tr.doc, Math.min(from, maxPos), Math.min(endPos, maxPos)));
       view.dispatch(tr);
@@ -158,7 +161,7 @@ export function convertSelectionToCodeBlock(view: EditorView, schema: Schema): b
         view.dispatch(state.tr.setSelection(TextSelection.create(state.doc, from, endPos)).setMeta("addToHistory", false));
       }
       if (liftListItem(itemType)(view.state, view.dispatch, view)) {
-        return (setBlockType(codeBlock) as PMCommand)(view.state, view.dispatch, view);
+        return (setBlockType(codeBlock, attrs) as PMCommand)(view.state, view.dispatch, view);
       }
     }
     return false;
@@ -181,7 +184,7 @@ export function convertSelectionToCodeBlock(view: EditorView, schema: Schema): b
   const replaceFrom = $from.before(replaceDepth);
   const replaceTo = $end.after(replaceDepth);
   const text = lines.join("\n");
-  const cbNode = codeBlock.create(null, text ? schema.text(text) : undefined);
+  const cbNode = codeBlock.create(attrs, text ? schema.text(text) : undefined);
   const tr = state.tr.replaceWith(replaceFrom, replaceTo, cbNode);
   tr.setSelection(TextSelection.near(tr.doc.resolve(replaceFrom + 1), 1));
   view.dispatch(tr);
@@ -211,7 +214,8 @@ export const toolbar = {
     if (!runWrap("blockquote")) toggleLinePrefixForToolbar("> ");
   },
   bulletList() {
-    if (!runList("bullet_list")) toggleLinePrefixForToolbar("- ");
+    const marker = String(useUi.getState().prefs.unorderedListMarker ?? "-");
+    if (!runList("bullet_list")) toggleLinePrefixForToolbar(`${marker} `);
   },
   orderedList() {
     if (!runList("ordered_list")) toggleLinePrefixForToolbar("1. ");
@@ -261,7 +265,10 @@ export const toolbar = {
   },
   codeBlock() {
     const done = md((view, schema) => convertSelectionToCodeBlock(view, schema));
-    if (!done) insertAtCursor("```\n\n```");
+    if (!done) {
+      const lang = String(useUi.getState().prefs.defaultCodeLang ?? "").trim();
+      insertAtCursor(`\`\`\`${lang}\n\n\`\`\``);
+    }
   },
   hr() {
     if (!insertNode("hr")) insertAtCursor("\n---\n");

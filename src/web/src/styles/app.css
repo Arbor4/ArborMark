@@ -1460,7 +1460,34 @@ div:has(> .am-milkdown-host) {
 .am-codeblock:hover .am-codeblock-copy { opacity: 1; }
 .am-codeblock-copy:hover { color: var(--am-accent); border-color: var(--am-accent); }
 .am-codeblock-copy.copied { color: var(--am-success); border-color: var(--am-success); }
-.am-codeblock-body { position: relative; }
+.am-codeblock-body {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+.am-codeblock-gutter {
+  display: none;
+  flex-direction: column;
+  shrink: 0;
+  padding: 12px 10px 12px 12px;
+  font-family: var(--am-font-mono);
+  font-size: 0.86em;
+  line-height: 1.6;
+  color: var(--am-text-muted);
+  text-align: right;
+  user-select: none;
+  -webkit-user-select: none;
+  border-right: 1px solid var(--am-border);
+  background: color-mix(in srgb, var(--am-text) 2%, transparent);
+}
+.am-milkdown-host.am-fence-linenos .am-codeblock-gutter {
+  display: flex;
+}
+.am-codeblock-body > pre.am-codeblock-view,
+.am-codeblock-body > pre.am-codeblock-edit {
+  min-width: 0;
+  flex: 1;
+}
 .am-milkdown-host .ProseMirror pre.am-codeblock-view,
 .am-milkdown-host .ProseMirror pre.am-codeblock-edit {
   margin: 0;
@@ -1691,6 +1718,25 @@ div:has(> .am-milkdown-host) {
 .am-math-selected { box-shadow: 0 0 0 2px var(--am-accent-soft); }
 .am-milkdown-host .ProseMirror .katex { font-size: 1.05em; }
 .am-milkdown-host .ProseMirror .katex-error { color: var(--am-danger); }
+/* 块级公式自动编号 */
+.am-milkdown-host.am-math-numbered .ProseMirror {
+  counter-reset: am-math-eq;
+}
+.am-milkdown-host.am-math-numbered .ProseMirror .am-math-block {
+  counter-increment: am-math-eq;
+  padding-right: 52px;
+}
+.am-milkdown-host.am-math-numbered .ProseMirror .am-math-block:not(.am-math-editing)::after {
+  content: "(" counter(am-math-eq) ")";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--am-text-muted);
+  pointer-events: none;
+}
 
 /* ── 表格 node view：增删行列控件 ───────────────────────────────────────── */
 /* %%注释%% 行内 mark：灰显 */

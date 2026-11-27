@@ -18,7 +18,7 @@ import { readConfig, writeConfig, defaultConfig, type WebSearchConfig } from "@/
 import { CelebrationLayer, type CelebrationHandle } from "./Celebration";
 import { showOnboarding } from "../Onboarding";
 import { useLang } from "@/bridge/i18n";
-import { invoke } from "@/bridge/ipc";
+import { invoke, isTauri } from "@/bridge/ipc";
 import { Switch } from "../common";
 import { Section, Row, PrefSwitch, Select } from "./SettingsPrimitives";
 
@@ -174,10 +174,6 @@ export function GeneralSettings() {
           }
         />
       </Section>
-      <Section title={t("会话与文件树")}>
-        <Row label={t("启动时恢复上次会话")} hint={t("重新打开上次的文件夹与文档")} control={<Switch checked={bool("restoreSession")} label={t("恢复会话")} onChange={(v) => setPref("restoreSession", v)} />} />
-        <PrefSwitch k="showHiddenFiles" label={t("显示隐藏文件")} hint={t("文件树中显示以 . 开头的文件")} def={false} />
-      </Section>
       <Section title={t("设置备份与迁移")}>
         <Row
           label={t("导出设置")}
@@ -247,10 +243,13 @@ export function GeneralSettings() {
               onClick={() => {
                 try {
                   localStorage.removeItem("arbor.dismissed_dialogs");
-                  useUi.getState().toast(t("已重置所有警告提示"), "success");
                 } catch {
                   /* ignore */
                 }
+                if (isTauri()) {
+                  invoke("setting.resetAllDialogWarnings", {}).catch(() => {});
+                }
+                useUi.getState().toast(t("已重置所有警告提示"), "success");
               }}
               className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
             >
@@ -266,22 +265,23 @@ export function GeneralSettings() {
 export function ShortcutSettings() {
   const { t } = useLang();
   const isMac = typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent);
+  const mod = isMac ? "⌘" : "Ctrl+";
   const groups: { title: string; items: [string, string][] }[] = [
     {
       title: t("文件"),
       items: [
-        ["新建文件", "⌘N"],
-        ["保存", "⌘S"],
-        ["快速打开", "⌘P"],
-        ["全局搜索", "⌘⇧F"],
-        ["打开文件夹", "⌘O"],
+        ["新建文件", `${mod}N`],
+        ["保存", `${mod}S`],
+        ["快速打开", `${mod}P`],
+        ["全局搜索", isMac ? "⌘⇧F" : "Ctrl+Shift+F"],
+        ["打开文件夹", `${mod}O`],
       ],
     },
     {
       title: t("段落与标题"),
       items: [
         ["一阶 ~ 六阶标题", isMac ? "⌘1 ~ ⌘6" : "Ctrl+1 ~ 6"],
-        ["普通段落", isMac ? "⌘0" : "Ctrl+0"],
+        ["普通段落", `${mod}0`],
       ],
     },
     {
@@ -289,26 +289,26 @@ export function ShortcutSettings() {
       items: [
         ["文件 / 大纲面板", isMac ? "⌘⇧2 / ⌘⇧1" : "Ctrl+Shift+2 / 1"],
         ["收起 / 展开侧边栏", isMac ? "⌘\\ / ⌘⇧L" : "Ctrl+\\ / Ctrl+Shift+L"],
-        ["编辑 / 源码", isMac ? "⌘/" : "Ctrl+/"],
+        ["编辑 / 源码", `${mod}/`],
         ["专注模式", isMac ? "⌘⇧D" : "Ctrl+Shift+D"],
-        ["偏好设置", isMac ? "⌘," : "Ctrl+,"],
+        ["偏好设置", `${mod},`],
       ],
     },
     {
       title: t("编辑"),
       items: [
-        ["加粗 / 斜体 / 行内代码", "⌘B / I / ⌘E"],
-        ["删除线", "⌘⇧X"],
-        ["查找 / 替换（当前文件）", "⌘F / ⌘⌥F"],
-        ["撤销 / 重做", "⌘Z / ⇧Z"],
+        ["加粗 / 斜体 / 行内代码", isMac ? "⌘B / I / ⌘E" : "Ctrl+B / I / E"],
+        ["删除线", isMac ? "⌘⇧X" : "Ctrl+Shift+X"],
+        ["查找 / 替换（当前文件）", isMac ? "⌘F / ⌘R" : "Ctrl+F / Ctrl+R"],
+        ["撤销 / 重做", isMac ? "⌘Z / ⌘⇧Z" : "Ctrl+Z / Ctrl+Shift+Z"],
       ],
     },
     {
       title: t("文件树"),
       items: [
         ["重命名", "F2"],
-        ["删除所选", "⌫"],
-        ["连选 / 多选", "Shift 点击 / ⌘点击"],
+        ["删除所选", isMac ? "⌫" : "Delete"],
+        ["连选 / 多选", isMac ? "Shift 点击 / ⌘点击" : "Shift 点击 / Ctrl 点击"],
         ["移动文件", "拖拽到目标文件夹"],
       ],
     },

@@ -130,6 +130,7 @@ export function CodeEditor() {
   const viewRef = useRef<EditorView | null>(null);
   const langComp = useRef(new Compartment());
   const lineNoComp = useRef(new Compartment());
+  const wrapComp = useRef(new Compartment());
   const pairComp = useRef(new Compartment());
   const readonlyComp = useRef(new Compartment());
   const applyingExternal = useRef(false);
@@ -142,6 +143,8 @@ export function CodeEditor() {
   const fontSize = useUi((s) => s.fontSize);
   const editorWidth = useUi((s) => s.editorWidth);
   const lineNumbersOn = useUi((s) => s.lineNumbers);
+  const lineWrappingOn = useUi((s) => s.prefs.lineWrapping !== false);
+  const typewriterMode = useUi((s) => s.typewriterMode);
   const readonlyMode = useUi((s) => s.readonlyMode);
   const autoPairOn = useUi((s) => s.prefs.autoPair !== false);
   const indentSize = Number(useUi((s) => s.prefs.indentSize ?? 2));
@@ -172,8 +175,9 @@ export function CodeEditor() {
           indentOnInput(), bracketMatching(), autocompletion(),
           rectangularSelection(), crosshairCursor(), highlightActiveLine(),
           syntaxHighlighting(codeHighlight), codeTheme,
-          // 偏好驱动：行号 / 自动配对+缩进 / 只读
+          // 偏好驱动：行号 / 换行 / 自动配对+缩进 / 只读
           lineNoComp.current.of(initUi.lineNumbers ? [lineNumbers(), highlightActiveLineGutter()] : []),
+          wrapComp.current.of(initUi.prefs.lineWrapping === false ? [] : EditorView.lineWrapping),
           pairComp.current.of(pairExtensions(initUi.prefs)),
           readonlyComp.current.of(EditorState.readOnly.of(initUi.readonlyMode)),
           // 搜索统一走应用内 FindInFile（顶部悬浮）：不含 searchKeymap，避免 CM6 底部搜索面板重复
@@ -181,6 +185,11 @@ export function CodeEditor() {
           langComp.current.of([]),
           EditorView.updateListener.of((u) => {
             if (u.docChanged && !applyingExternal.current) useWorkspace.getState().setContent(u.state.doc.toString());
+            if ((u.selectionSet || u.docChanged) && !applyingExternal.current && useUi.getState().typewriterMode && u.view.hasFocus) {
+              requestAnimationFrame(() => {
+                u.view.dispatch({ effects: EditorView.scrollIntoView(u.state.selection.main.head, { y: "center" }) });
+              });
+            }
           }),
           EditorView.domEventHandlers({
             copy: (e, view) => {
@@ -271,12 +280,28 @@ export function CodeEditor() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* 偏好热更新：行号 / 自动配对+缩进 / 只读（Compartment 重配置，保留撤销历史与光标） */
+  /* 偏好热更新：行号 / 自动换行 / 自动配对+缩进 / 只读（Compartment 重配置，保留撤销历史与光标） */
   useEffect(() => {
     viewRef.current?.dispatch({
       effects: lineNoComp.current.reconfigure(lineNumbersOn ? [lineNumbers(), highlightActiveLineGutter()] : []),
     });
   }, [lineNumbersOn]);
+
+  useEffect(() => {
+    viewRef.current?.dispatch({
+      effects: wrapComp.current.reconfigure(lineWrappingOn ? EditorView.lineWrapping : []),
+    });
+  }, [lineWrappingOn]);
+
+  useEffect(() => {
+    if (!typewriterMode) return;
+    const v = viewRef.current;
+    if (v) {
+      requestAnimationFrame(() => {
+        v.dispatch({ effects: EditorView.scrollIntoView(v.state.selection.main.head, { y: "center" }) });
+      });
+    }
+  }, [typewriterMode]);
 
   useEffect(() => {
     viewRef.current?.dispatch({

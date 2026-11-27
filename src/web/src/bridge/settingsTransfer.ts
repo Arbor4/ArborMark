@@ -15,6 +15,9 @@ export interface SettingsSnapshot {
   lineNumbers: boolean;
   autoSave: boolean;
   typewriterMode: boolean;
+  toolbarVisible?: boolean;
+  statusBarVisible?: boolean;
+  wordCountVisible?: boolean;
   prefs: Record<string, boolean | string | number>;
 }
 
@@ -28,6 +31,9 @@ export function collectSettings(): SettingsSnapshot {
     lineNumbers: s.lineNumbers,
     autoSave: s.autoSave,
     typewriterMode: s.typewriterMode,
+    toolbarVisible: s.toolbarVisible,
+    statusBarVisible: s.statusBarVisible,
+    wordCountVisible: s.wordCountVisible,
     prefs: { ...s.prefs },
   };
 }
@@ -84,6 +90,9 @@ export function applySettings(raw: unknown): { ok: boolean; error?: string } {
   if (typeof s.lineNumbers === "boolean" && s.lineNumbers !== useUi.getState().lineNumbers) ui.toggleLineNumbers();
   if (typeof s.autoSave === "boolean") ui.setAutoSave(s.autoSave);
   if (typeof s.typewriterMode === "boolean" && s.typewriterMode !== useUi.getState().typewriterMode) ui.toggleTypewriterMode();
+  if (typeof s.toolbarVisible === "boolean" && s.toolbarVisible !== useUi.getState().toolbarVisible) ui.toggleToolbar();
+  if (typeof s.statusBarVisible === "boolean" && s.statusBarVisible !== useUi.getState().statusBarVisible) ui.toggleStatusBar();
+  if (typeof s.wordCountVisible === "boolean" && s.wordCountVisible !== useUi.getState().wordCountVisible) ui.toggleWordCount();
   if (typeof s.theme === "string" && getAllThemes().some((t) => t.id === s.theme)) applyTheme(s.theme);
   if (s.themeMode === "light" || s.themeMode === "dark" || s.themeMode === "system") setThemeMode(s.themeMode);
   return { ok: true };

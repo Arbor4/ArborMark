@@ -7,6 +7,7 @@ import DOMPurify from "dompurify";
 import katex from "katex";
 import hljs from "highlight.js/lib/common";
 import "katex/dist/katex.min.css";
+import { useUi } from "@/stores/ui";
 
 const md: MarkdownIt = new MarkdownIt({
   html: false,
@@ -249,6 +250,12 @@ md.inline.ruler.before("emphasis", "mark", (state, silent) => {
 /* ── 对外接口 ─────────────────────────────────────────────────────────────── */
 
 export function renderMarkdown(source: string): string {
+  const prefs = useUi.getState().prefs;
+  md.set({
+    html: prefs.blockHTML !== false,
+    breaks: prefs.preserveLineBreak === true,
+    typographer: prefs.smartQuotes !== false || prefs.smartDashes !== false,
+  });
   const raw = md.render(source ?? "");
   return DOMPurify.sanitize(raw, {
     ADD_TAGS: ["input", "mjx-container"],

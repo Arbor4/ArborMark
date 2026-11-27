@@ -138,6 +138,10 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
 
   const body = document.createElement("div");
   body.className = "am-codeblock-body";
+  const gutter = document.createElement("div");
+  gutter.className = "am-codeblock-gutter";
+  gutter.contentEditable = "false";
+  gutter.setAttribute("aria-hidden", "true");
   const viewArea = document.createElement("pre");
   viewArea.className = "am-codeblock-view hljs";
   viewArea.contentEditable = "false";
@@ -150,10 +154,17 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
   contentDOM.className = "hljs";
   contentDOM.contentEditable = "true";
   editPre.appendChild(contentDOM);
-  body.append(viewArea, editPre);
+  body.append(gutter, viewArea, editPre);
   dom.append(header, body);
 
   const posOf = () => (typeof getPos === "function" ? getPos() : undefined);
+
+  const syncGutter = () => {
+    const count = Math.max(1, node.textContent.split("\n").length);
+    let html = "";
+    for (let i = 1; i <= count; i++) html += `<span>${i}</span>`;
+    gutter.innerHTML = html;
+  };
 
   const renderView = () => {
     const lang = (node.attrs.language as string) || "";
@@ -163,6 +174,7 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
     // 补零宽空格保住空末行/空块，避免失焦回到浏览态时高度跳变。
     const html = highlightCode(code, lang);
     viewCode.innerHTML = code === "" || code.endsWith("\n") ? html + "\u200B" : html;
+    syncGutter();
     paintCodeFind();
   };
 
@@ -441,7 +453,10 @@ export const codeBlockNodeView = $view(codeBlockSchema.node, () => (initialNode,
       node = newNode;
       if (!editing && selectionInsideThisNode(newNode)) activateEditUI();
       if (!editing) renderView();
-      else langBadge.textContent = (node.attrs.language as string) || "text";
+      else {
+        langBadge.textContent = (node.attrs.language as string) || "text";
+        syncGutter();
+      }
       return true;
     },
     stopEvent(event: Event) {

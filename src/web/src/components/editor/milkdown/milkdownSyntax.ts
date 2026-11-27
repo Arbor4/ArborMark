@@ -327,7 +327,9 @@ export function eastAsianWidth(str: string): number {
  * 3. 无序列表项归一化：将序列化产生的偶数嵌套层级 `* ` 或 `+ ` 统一规范为 `- `（含引用块内）；
  * 4. 水平分割线归一化：独立行的 `***`、`* * *` 等统一规整为标准的 `---`。
  */
-export function normalizeMarkdown(md: string): string {
+export type BulletMarker = "-" | "*" | "+";
+
+export function normalizeMarkdown(md: string, bullet: BulletMarker = "-"): string {
   const lines = md.split("\n");
   const out: string[] = [];
   let inFence = false;
@@ -384,16 +386,16 @@ export function normalizeMarkdown(md: string): string {
     let processed = line;
 
     // 1. 待办列表归一化（包括普通缩进、嵌套、引用块内 > 等）
-    // 将 * [ ] / + [ ] / - [X] 等统一规范为标准 - [ ] 与 - [x]
+    // 将 * [ ] / + [ ] / - [X] 等统一规范为指定无序列表标记
     processed = processed.replace(
       /^(\s*(?:>\s*)*)[*+-]\s+\[([ xX])\](?=\s|$)/,
-      (_match, prefix, check) => `${prefix}- [${check.toLowerCase()}]`
+      (_match, prefix, check) => `${prefix}${bullet} [${check.toLowerCase()}]`
     );
 
-    // 2. 普通无序列表项归一化为 "- "（包括引用块内、缩进嵌套，排除上面已处理的任务列表）
+    // 2. 普通无序列表项归一化为指定标记（包括引用块内、缩进嵌套，排除上面已处理的任务列表）
     processed = processed.replace(
-      /^(\s*(?:>\s*)*)[*+]\s+(?!\[[ xX]\])/,
-      "$1- "
+      /^(\s*(?:>\s*)*)[*+-]\s+(?!\[[ xX]\])/,
+      `$1${bullet} `
     );
 
     out.push(processed);

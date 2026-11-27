@@ -50,6 +50,7 @@ export function OutlinePanel() {
   const content = useWorkspace((s) => s.content);
   const activePath = useWorkspace((s) => s.activePath);
   const activeKey = useUi((s) => s.outlineActive);
+  const collapsible = useUi((s) => s.prefs.outlineCollapsible !== false);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -121,8 +122,8 @@ export function OutlinePanel() {
     const id = `${node.item.line}`;
     const key = `${node.item.level}:${node.item.text}`;
     const isActive = activeKey === key;
-    const hasChildren = node.children.length > 0;
-    const isCollapsed = collapsed.has(id);
+    const hasChildren = collapsible && node.children.length > 0;
+    const isCollapsed = collapsible && collapsed.has(id);
     return (
       <div key={`${id}-${node.occurrence}`}>
         <div
@@ -137,22 +138,24 @@ export function OutlinePanel() {
               ? "bg-accent-soft text-accent"
               : "text-ink-secondary hover:bg-hover hover:text-ink"
           }`}
-          style={{ paddingLeft: 4 + depth * 14 }}
+          style={{ paddingLeft: (collapsible ? 4 : 10) + depth * 14 }}
           title={node.item.text}
         >
-          <button
-            data-chevron="true"
-            aria-label={isCollapsed ? t("展开") : t("折叠")}
-            onClick={(e) => {
-              e.stopPropagation();
-              if (hasChildren) toggle(id);
-            }}
-            className={`flex h-4 w-4 shrink-0 items-center justify-center rounded transition-transform ${
-              hasChildren ? "text-ink-muted hover:text-ink" : "invisible"
-            } ${isCollapsed ? "" : "rotate-90"}`}
-          >
-            <ChevronRight size={11} />
-          </button>
+          {collapsible && (
+            <button
+              data-chevron="true"
+              aria-label={isCollapsed ? t("展开") : t("折叠")}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (hasChildren) toggle(id);
+              }}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded transition-transform ${
+                hasChildren ? "text-ink-muted hover:text-ink" : "invisible"
+              } ${isCollapsed ? "" : "rotate-90"}`}
+            >
+              <ChevronRight size={11} />
+            </button>
+          )}
           <div className="flex min-w-0 flex-1 items-center text-left select-none">
             <span className={`truncate ${depth <= 1 || isActive ? "font-medium" : ""} ${isActive ? "text-accent" : depth <= 1 ? "text-ink" : ""}`}>{node.item.text}</span>
           </div>
@@ -167,24 +170,28 @@ export function OutlinePanel() {
       <PanelHeader title={t("大纲")} />
       {outline.length > 0 && (
         <div className="flex shrink-0 items-center gap-1 border-b border-line px-2 py-1">
-          <Tooltip label={t("全部展开")}>
-            <button
-              aria-label={t("全部展开")}
-              onClick={() => setCollapsed(new Set())}
-              className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
-            >
-              <ChevronsUpDown size={13} />
-            </button>
-          </Tooltip>
-          <Tooltip label={t("全部折叠")}>
-            <button
-              aria-label={t("全部折叠")}
-              onClick={() => setCollapsed(new Set(allIds))}
-              className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
-            >
-              <ChevronsDownUp size={13} />
-            </button>
-          </Tooltip>
+          {collapsible && (
+            <>
+              <Tooltip label={t("全部展开")}>
+                <button
+                  aria-label={t("全部展开")}
+                  onClick={() => setCollapsed(new Set())}
+                  className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+                >
+                  <ChevronsUpDown size={13} />
+                </button>
+              </Tooltip>
+              <Tooltip label={t("全部折叠")}>
+                <button
+                  aria-label={t("全部折叠")}
+                  onClick={() => setCollapsed(new Set(allIds))}
+                  className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+                >
+                  <ChevronsDownUp size={13} />
+                </button>
+              </Tooltip>
+            </>
+          )}
           <span className="ml-auto text-[10.5px] text-ink-muted">{t("outline.count", { n: outline.length })}</span>
         </div>
       )}

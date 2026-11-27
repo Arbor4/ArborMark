@@ -30,16 +30,16 @@ import {
 } from "./AppSettingsTabs";
 
 const TABS = [
-  { id: "appearance", label: "settings.appearance", icon: Palette },
-  { id: "file", label: "settings.file", icon: FolderOpen },
-  { id: "editor", label: "settings.editor", icon: PenLine },
-  { id: "markdown", label: "settings.markdown", icon: FileText },
-  { id: "image", label: "settings.image", icon: ImageIcon },
-  { id: "export", label: "settings.export", icon: FileDown },
-  { id: "search", label: "settings.search", icon: Globe },
-  { id: "general", label: "settings.general", icon: Settings2 },
-  { id: "shortcuts", label: "settings.shortcuts", icon: Keyboard },
-  { id: "about", label: "settings.about", icon: Info },
+  { id: "file", label: "settings.file", icon: FolderOpen, group: 1 },
+  { id: "editor", label: "settings.editor", icon: PenLine, group: 1 },
+  { id: "image", label: "settings.image", icon: ImageIcon, group: 1 },
+  { id: "markdown", label: "settings.markdown", icon: FileText, group: 1 },
+  { id: "export", label: "settings.export", icon: FileDown, group: 1 },
+  { id: "appearance", label: "settings.appearance", icon: Palette, group: 1 },
+  { id: "search", label: "settings.search", icon: Globe, group: 2 },
+  { id: "shortcuts", label: "settings.shortcuts", icon: Keyboard, group: 2 },
+  { id: "general", label: "settings.general", icon: Settings2, group: 2 },
+  { id: "about", label: "settings.about", icon: Info, group: 2 },
 ];
 
 export function SettingsPanel() {
@@ -50,28 +50,31 @@ export function SettingsPanel() {
   const openSettings = useUi((s) => s.openSettings);
 
   return (
-    <Modal open={open} onClose={close} width={780} labelledBy="settings-title">
-      <div className="relative flex h-[580px] max-h-[82vh]">
-        {/* 左侧导航 */}
-        <nav className="flex w-[160px] shrink-0 flex-col gap-0.5 border-r border-line bg-panel p-2.5" aria-label={t("设置分类")}>
+    <Modal open={open} onClose={close} width={800} labelledBy="settings-title">
+      <div className="relative flex h-[600px] max-h-[84vh]">
+        {/* 左侧导航：按文档生命周期与写作配置顺序分组 */}
+        <nav className="flex w-[164px] shrink-0 flex-col gap-0.5 border-r border-line bg-panel p-2.5" aria-label={t("设置分类")}>
           <p id="settings-title" className="mb-2 px-2 pt-1 text-[13px] font-semibold text-ink">
             {t("settings.title")}
           </p>
-          {TABS.map((tb) => {
+          {TABS.map((tb, idx) => {
             const Icon = tb.icon;
+            const showDivider = idx > 0 && TABS[idx - 1].group !== tb.group;
             return (
-              <button
-                key={tb.id}
-                onClick={() => openSettings(tb.id)}
-                aria-current={tab === tb.id}
-                className={`flex items-center gap-2 rounded-md px-2.5 py-2 text-left text-[12.5px] transition-colors ${
-                  tab === tb.id
-                    ? "bg-accent-soft font-medium text-accent"
-                    : "text-ink-secondary hover:bg-hover hover:text-ink"
-                }`}
-              >
-                <Icon size={14} /> {t(tb.label)}
-              </button>
+              <div key={tb.id}>
+                {showDivider && <div className="mx-1.5 my-1.5 h-px bg-line" aria-hidden="true" />}
+                <button
+                  onClick={() => openSettings(tb.id)}
+                  aria-current={tab === tb.id}
+                  className={`flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[12.5px] transition-colors ${
+                    tab === tb.id
+                      ? "bg-accent-soft font-medium text-accent"
+                      : "text-ink-secondary hover:bg-hover hover:text-ink"
+                  }`}
+                >
+                  <Icon size={14} /> {t(tb.label)}
+                </button>
+              </div>
             );
           })}
           <span className="flex-1" />

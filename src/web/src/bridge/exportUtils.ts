@@ -139,6 +139,9 @@ export async function exportMarkdownAsImage(name: string, md: string) {
         name,
       });
 
+      if (ui.prefs.exportOpenFolder !== false) {
+        void fs.showInFolder(savePath);
+      }
       // 成功提示并提供「打开所在文件夹」按钮
       ui.toast(`已导出图片：${pathUtil.name(savePath)}`, "success", {
         label: "打开所在文件夹",
@@ -186,6 +189,9 @@ export async function exportMarkdownAsHtml(
     if (res?.canceled || !res?.filePath) return;
     const savePath = res.filePath;
     await fs.writeFile(savePath, html);
+    if (ui.prefs.exportOpenFolder !== false) {
+      void fs.showInFolder(savePath);
+    }
     ui.toast(`已导出 HTML：${pathUtil.name(savePath)}`, "success", {
       label: "打开所在文件夹",
       run: () => fs.showInFolder(savePath),

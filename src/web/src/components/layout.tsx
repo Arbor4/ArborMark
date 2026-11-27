@@ -265,6 +265,7 @@ export function StatusBar() {
   const typewriter = useUi((s) => s.typewriterMode);
   const toggleTypewriter = useUi((s) => s.toggleTypewriterMode);
   const metric = useUi((s) => s.prefs.statusMetric ?? "words");
+  const wordsPerMinute = Math.max(50, Number(useUi((s) => s.prefs.wordsPerMinute ?? 300)) || 300);
   const setPref = useUi((s) => s.setPref);
   const { t } = useLang();
   const chromeVisible = sidebarVisible || railVisible;
@@ -316,7 +317,7 @@ export function StatusBar() {
   }, [content]);
 
   const { words, chars, lines } = metrics;
-  const readMinutes = Math.max(1, Math.round(words / 380));
+  const readMinutes = Math.max(1, Math.round(words / wordsPerMinute));
   const metricLabel = metric === "chars" ? `${chars} ${t("status.chars")}` : metric === "lines" ? `${lines} ${t("status.lines")}` : `${words} ${t("status.words")}`;
   const previewName = activePath ? pathUtil.name(activePath) : "";
   const previewKind = getPreviewKind(previewName);
