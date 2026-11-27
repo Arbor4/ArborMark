@@ -97,6 +97,11 @@ export async function htmlToPngBlob(html: string, width = 860): Promise<Blob> {
   });
 }
 
+export function defaultExportPath(filename: string): string {
+  const dir = String(useUi.getState().prefs.defaultExportDir ?? "").trim();
+  return dir ? pathUtil.join(dir, filename) : filename;
+}
+
 /**
  * 导出长图并提示，附带「打开所在文件夹」按钮。
  */
@@ -114,7 +119,7 @@ export async function exportMarkdownAsImage(name: string, md: string) {
         "dialog.showSaveDialog",
         {
           title: "导出长图",
-          defaultPath: `${name}.png`,
+          defaultPath: defaultExportPath(`${name}.png`),
           filters: [{ name: "PNG 图像 (*.png)", extensions: ["png"] }],
         },
       ).catch(() => null);
@@ -181,7 +186,7 @@ export async function exportMarkdownAsHtml(
       "dialog.showSaveDialog",
       {
         title: "导出 HTML",
-        defaultPath: `${name}.html`,
+        defaultPath: defaultExportPath(`${name}.html`),
         filters: [{ name: "HTML 文档 (*.html)", extensions: ["html"] }],
       },
     ).catch(() => null);

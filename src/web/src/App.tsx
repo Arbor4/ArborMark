@@ -20,6 +20,7 @@ import { Onboarding } from "@/components/Onboarding";
 import { ConfirmDialog, Toasts } from "@/components/common";
 import { isTauri, invoke, listen } from "@/bridge/ipc";
 import { fs, pathUtil } from "@/bridge/fs";
+import { getShortcutCombo, matchesCombo } from "@/bridge/shortcuts";
 
 export default function App() {
   const panel = useUi((s) => s.panel);
@@ -34,8 +35,10 @@ export default function App() {
     fs.setTitle(`${dirty ? "● " : ""}${name ? `${name} — ` : ""}ArborMark`);
   }, [activePath, dirty]);
 
-  /* 启动：主题 → 工作区（Tauri 下回报渲染层就绪并消费启动参数 targetFile） */
+  /* 启动：主题 → 界面缩放 → 工作区（Tauri 下回报渲染层就绪并消费启动参数 targetFile） */
   useEffect(() => {
+    const z = Number(useUi.getState().prefs.uiZoom ?? 100);
+    if (z !== 100) document.documentElement.style.zoom = `${z}%`;
     initThemes().then(async () => {
       const ws = useWorkspace.getState();
       if (isTauri()) {
@@ -77,26 +80,29 @@ export default function App() {
   /* 文件内搜索同步（⌘/Ctrl+F） */
   useEffect(() => installFindSync(), []);
 
-  /* 全局快捷键 */
+  /* 全局快捷键（支持偏好设置自定义快捷键） */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // 正在录制快捷键时不触发全局热键
+      if ((e.target as HTMLElement | null)?.dataset?.shortcutRecorder === "true") return;
       const mod = e.metaKey || e.ctrlKey;
       const ui = useUi.getState();
       const ws = useWorkspace.getState();
+      const hit = (id: string) => matchesCombo(e, getShortcutCombo(id));
 
-      if (mod && e.key === "p") {
+      if (hit("file.quickOpen")) {
         e.preventDefault();
         ui.setQuickOpen(!ui.quickOpenOpen);
-      } else if (mod && e.key === ",") {
+      } else if (hit("view.preferences")) {
         e.preventDefault();
         ui.openSettings();
-      } else if (mod && e.shiftKey && (e.key === "F" || e.key === "f")) {
+      } else if (hit("file.globalSearch")) {
         e.preventDefault();
         ui.setGlobalSearch(true);
-      } else if (mod && (e.key === "F" || e.key === "f")) {
+      } else if (hit("edit.find")) {
         e.preventDefault();
         useFind.getState().setOpen(true);
-      } else if (mod && (e.key === "r" || e.key === "R" || e.key === "h" || e.key === "H")) {
+      } else if (hit("edit.replace") || (mod && (e.key === "h" || e.key === "H"))) {
         e.preventDefault();
         useFind.getState().openReplace();
       } else if (mod && e.shiftKey && (e.key === "g" || e.key === "G")) {
@@ -109,7 +115,7 @@ export default function App() {
         const f = useFind.getState();
         if (f.open) f.next();
         else f.setOpen(true);
-      } else if (mod && e.key === "\\") {
+      } else if (hit("view.toggleChrome")) {
         e.preventDefault();
         ui.toggleChrome();
       } else if (mod && !e.shiftKey && !e.altKey && ["1", "2", "3", "4", "5", "6"].includes(e.key)) {
@@ -120,38 +126,35 @@ export default function App() {
         // ⌘0：对齐 Typora 规范，重置为普通段落
         e.preventDefault();
         stylize.setParagraph();
-      } else if (mod && e.shiftKey && (e.key === "1" || e.key === "!")) {
-        // ⌘⇧1：对齐 Typora 规范切换大纲面板
+      } else if (hit("view.outlinePanel")) {
         e.preventDefault();
         ui.setPanel("outline");
-      } else if (mod && e.shiftKey && (e.key === "2" || e.key === "@" || e.key === "3" || e.key === "#")) {
-        // ⌘⇧2 / ⌘⇧3：对齐 Typora 规范切换文档列表 / 文件树面板
+      } else if (hit("view.filesPanel") || (mod && e.shiftKey && (e.key === "3" || e.key === "#"))) {
         e.preventDefault();
         ui.setPanel("files");
-      } else if (mod && e.shiftKey && (e.key === "l" || e.key === "L")) {
-        // ⌘⇧L：对齐 Typora 规范显示/隐藏侧边栏
+      } else if (hit("view.toggleSidebar")) {
         e.preventDefault();
         ui.toggleSidebar();
-      } else if (mod && e.key === "/") {
+      } else if (hit("view.toggleSource")) {
         e.preventDefault();
         ui.setEditorMode(ui.editorMode === "edit" ? "source" : "edit");
-      } else if (mod && e.shiftKey && (e.key === "D" || e.key === "d")) {
+      } else if (hit("view.focusMode")) {
         e.preventDefault();
         ui.toggleFocusMode();
-      } else if (mod && e.shiftKey && (e.key === "N" || e.key === "n")) {
+      } else if (hit("file.newWindow")) {
         e.preventDefault();
         window.ClientCommand?.newWindow?.();
-      } else if (mod && (e.key === "n" || e.key === "N") && !e.shiftKey) {
+      } else if (hit("file.new")) {
         e.preventDefault();
         if (ws.rootPath) ws.createFile(ws.rootPath);
-      } else if (mod && (e.key === "o" || e.key === "O") && !e.shiftKey) {
+      } else if (hit("file.openFolder")) {
         e.preventDefault();
         import("@/bridge/fs").then(({ fs }) =>
           fs.openFolderDialog().then((r) => {
             if (!r.canceled && r.filePaths[0]) ws.openFolder(r.filePaths[0]);
           }),
         );
-      } else if (mod && e.key === "s") {
+      } else if (hit("file.save")) {
         e.preventDefault();
         ws.save().then((ok) => ok && ui.toast("已保存", "success"));
       } else if (e.key === "Escape") {
@@ -257,14 +260,25 @@ export default function App() {
           }
 
           const ws = useWorkspace.getState();
+          const prefs = useUi.getState().prefs;
           const first = event.payload.paths[0];
           if (!first) return;
           const st = await fs.stat(first).catch(() => null);
           if (!st?.exists) return;
+          const IMPORTABLE_RE = /\.(docx|tex|latex|ltx|rst|rest|org|opml|textile|wiki|dokuwiki)$/i;
           if (st.isDir) {
-            await ws.openFolder(first).catch(() => {});
+            if (prefs.dragDropFolderAction !== "ignore") {
+              await ws.openFolder(first).catch(() => {});
+            }
           } else if (pathUtil.isMarkdown(first) || first.endsWith(".txt")) {
             await ws.openPath(first).catch(() => {});
+          } else if (IMPORTABLE_RE.test(first) && prefs.dragDropImportAction !== "ignore") {
+            invoke("pandoc.import", {
+              filePath: first,
+              pandocPath: String(prefs.pandocPath ?? ""),
+            }).catch((err) => {
+              useUi.getState().toast(`Pandoc 导入失败：${String(err)}`, "warning");
+            });
           } else if (!ws.rootPath) {
             const dir = pathUtil.parent(first);
             await ws.openFolder(dir).catch(() => {});

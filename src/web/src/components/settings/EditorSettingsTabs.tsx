@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Minus, Plus, Trash2, CircleHelp, FolderOpen, RefreshCw, RotateCcw, ExternalLink } from "lucide-react";
+import { Minus, Plus, Trash2, CircleHelp, FolderOpen, RefreshCw, RotateCcw, ExternalLink, FileClock } from "lucide-react";
 import { useUi, EDITOR_WIDTHS } from "@/stores/ui";
 import { useWorkspace, setAutoSave as setWorkspaceAutoSave, setFinalNewline } from "@/stores/workspace";
 import { useLang } from "@/bridge/i18n";
@@ -26,6 +26,45 @@ export function FileSettings() {
   );
   const startupFolder = String(prefs.startupFolder ?? "");
 
+  const recoverLatestDraft = async () => {
+    const ui = useUi.getState();
+    try {
+      if (isTauri()) {
+        const res = await invoke<{ found?: boolean; name?: string; content?: string }>("setting.latestUnsavedDraft");
+        if (res?.found && typeof res.content === "string") {
+          useWorkspace.setState({
+            activePath: `untitled://${res.name || "草稿.md"}`,
+            content: res.content,
+            savedContent: "",
+            dirty: true,
+          });
+          ui.closeSettings();
+          ui.toast(t("已恢复最新未保存草稿"), "success");
+          return;
+        }
+      } else {
+        const raw = localStorage.getItem("arbor.latest_draft");
+        if (raw) {
+          const parsed = JSON.parse(raw) as { name?: string; content?: string };
+          if (typeof parsed.content === "string") {
+            useWorkspace.setState({
+              activePath: `untitled://${parsed.name || "草稿.md"}`,
+              content: parsed.content,
+              savedContent: "",
+              dirty: true,
+            });
+            ui.closeSettings();
+            ui.toast(t("已恢复最新未保存草稿"), "success");
+            return;
+          }
+        }
+      }
+      ui.toast(t("暂无可恢复的草稿"), "info");
+    } catch {
+      ui.toast(t("恢复草稿失败"), "warning");
+    }
+  };
+
   return (
     <div>
       <Section title={t("启动选项")}>
@@ -39,6 +78,7 @@ export function FileSettings() {
               ariaLabel={t("启动选项")}
               options={[
                 ["restore", t("恢复上次目录与文档")],
+                ["new", t("打开新空白文档")],
                 ["folder", t("打开指定目录")],
                 ["blank", t("保持空白工作区")],
               ]}
@@ -104,6 +144,19 @@ export function FileSettings() {
             />
           }
         />
+        <Row
+          label={t("未保存的草稿")}
+          hint={t("意外退出或关闭自动保存时可从草稿恢复最近编辑内容")}
+          control={
+            <button
+              type="button"
+              onClick={() => void recoverLatestDraft()}
+              className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+            >
+              <FileClock size={13} /> {t("恢复未保存的草稿")}
+            </button>
+          }
+        />
       </Section>
 
       <Section title={t("默认格式与大纲")}>
@@ -145,6 +198,11 @@ export function FileSettings() {
             />
           }
         />
+        <PrefSwitch
+          k="recordRecentHistory"
+          label={t("记录历史文件与目录")}
+          hint={t("打开文件夹时记入最近访问列表")}
+        />
         <Row
           label={t("历史文件与目录记录")}
           hint={
@@ -162,6 +220,38 @@ export function FileSettings() {
             >
               <Trash2 size={13} /> {t("清除历史记录")}
             </button>
+          }
+        />
+      </Section>
+
+      <Section title={t("拖放行为控制")}>
+        <Row
+          label={t("拖入文件夹时")}
+          control={
+            <Select
+              value={String(prefs.dragDropFolderAction ?? "open")}
+              onChange={(v) => setPref("dragDropFolderAction", v)}
+              ariaLabel={t("拖入文件夹时")}
+              options={[
+                ["open", t("作为工作区打开")],
+                ["ignore", t("不处理")],
+              ]}
+            />
+          }
+        />
+        <Row
+          label={t("拖入可导入文件时")}
+          hint={t("如 .docx / .tex / .rst / .org 等（需 Pandoc）")}
+          control={
+            <Select
+              value={String(prefs.dragDropImportAction ?? "import")}
+              onChange={(v) => setPref("dragDropImportAction", v)}
+              ariaLabel={t("拖入可导入文件时")}
+              options={[
+                ["import", t("自动转换并导入")],
+                ["ignore", t("不处理")],
+              ]}
+            />
           }
         />
       </Section>
@@ -202,8 +292,13 @@ export function EditorSettings() {
         />
         <PrefSwitch
           k="autoPair"
-          label={t("自动配对符号")}
-          hint={t("自动补全括号、引号与 Markdown 标记")}
+          label={t("匹配括号和引号")}
+          hint={t("自动补全成对的 () [] {} 与引号")}
+        />
+        <PrefSwitch
+          k="autoPairMarkdown"
+          label={t("匹配 Markdown 行内符号")}
+          hint={t("自动补全成对的反引号 ` 等标记")}
         />
         <PrefSwitch
           k="spellcheck"
@@ -215,9 +310,15 @@ export function EditorSettings() {
 
       <Section title={t("复制与换行")}>
         <PrefSwitch
+          k="copyMarkdownByDefault"
+          label={t("复制时默认输出 Markdown 源码")}
+          hint={t("在所见即所得视图中直接 Ctrl/⌘+C 时以 Markdown 纯文本写入剪贴板")}
+          def={false}
+        />
+        <PrefSwitch
           k="copyCutWholeLine"
           label={t("复制/剪切整行")}
-          hint={t("复制或剪切时，若没有文字被选中，则处理光标所在的一整行")}
+          hint={t("复制或剪切时，若没有文字被选中，则处理光标所在的整段/整行")}
         />
         <Row
           label={t("默认换行符 (EOL)")}
@@ -283,6 +384,7 @@ export function ImageSettings() {
   const bool = (k: string, def = true) =>
     prefs[k] === undefined ? def : prefs[k] !== false && prefs[k] !== "false";
   const action = String(prefs.imgInsertAction ?? "assets");
+  const uploader = String(prefs.imgUploader ?? "none");
 
   const Check = ({
     k,
@@ -366,7 +468,12 @@ export function ImageSettings() {
               <div className="flex flex-col gap-1 pt-1">
                 <Check k="imgApplyLocal" label={t("对本地位置的图片应用上述规则")} />
                 <Check k="imgApplyNetwork" label={t("对网络位置的图片应用上述规则")} def={false} />
-                <Check k="imgYamlUpload" label={t("允许根据 YAML 设置自动上传图片")} def={false} />
+                <Check
+                  k="imgYamlUpload"
+                  label={t("允许根据 YAML 设置自动上传图片")}
+                  def={false}
+                  help={t("检测到 Front Matter 含 typora-copy-images-to: upload 时自动走上传服务")}
+                />
               </div>
             </div>
           </div>
@@ -445,14 +552,39 @@ export function ImageSettings() {
         )}
       </Section>
 
-      <Section title={t("图床与说明")}>
+      <Section title={t("上传服务设定")}>
         <Row
           label={t("上传服务")}
-          hint={t("当前版本优先保证本地相对路径与附件目录稳定落盘；未配置外部图床时将回退为本地引用")}
-          control={<span className="rounded bg-hover px-2 py-0.5 text-[11px] text-ink-muted">{t("无（本地优先）")}</span>}
+          hint={t("桌面端支持调用 PicGo CLI 或自定义上传脚本，从标准输出提取图片 URL")}
+          control={
+            <Select
+              value={uploader}
+              onChange={(v) => setPref("imgUploader", v)}
+              ariaLabel={t("上传服务")}
+              options={[
+                ["none", t("无（仅本地引用）")],
+                ["picgo", "PicGo (CLI)"],
+                ["custom", t("自定义命令")],
+              ]}
+            />
+          }
         />
+        {uploader === "custom" && (
+          <div className="border-b border-line py-2.5">
+            <input
+              value={String(prefs.imgUploadCommand ?? "")}
+              onChange={(e) => setPref("imgUploadCommand", e.target.value)}
+              placeholder={t("例如：piclist upload $IMAGES")}
+              aria-label={t("自定义上传命令")}
+              className="h-7 w-full rounded-md border border-line bg-field px-2.5 font-mono text-[11.5px] text-ink outline-none focus:border-accent"
+            />
+            <p className="mt-1 text-[10.5px] text-ink-muted">
+              {t("可使用 $IMAGES 作为图片路径占位符（省略时自动追加到命令末尾），需在 stdout 输出 https:// URL。")}
+            </p>
+          </div>
+        )}
         <p className="mt-2 rounded-md bg-hover px-3 py-2.5 text-[11.5px] leading-relaxed text-ink-secondary">
-          {t("拖拽或粘贴图片到编辑区、或经菜单「插入本地图片」时，按以上偏好落盘并生成路径。浏览器环境粘贴回退为自包含 data URI；桌面端复制真实文件到附件目录。点击图片可放大查看；导出 PDF/HTML 时相对路径按设置保留或转换。")}
+          {t("拖拽或粘贴图片到编辑区、或经菜单「插入本地图片」时，按以上偏好落盘或上传。浏览器环境粘贴回退为自包含 data URI；桌面端支持真实文件复制与 CLI 图床上传。")}
         </p>
       </Section>
     </div>
@@ -465,6 +597,12 @@ export function MarkdownSettings() {
   const setPref = useUi((s) => s.setPref);
   const bool = (k: string) => prefs[k] !== false;
   const toggle = (k: string) => (v: boolean) => setPref(k, v);
+  const numberingMode =
+    prefs.autoNumberingMode === "all" || prefs.autoNumberingMode === "ams" || prefs.autoNumberingMode === "none"
+      ? String(prefs.autoNumberingMode)
+      : prefs.autoNumberingForMath
+        ? "all"
+        : "none";
 
   return (
     <div>
@@ -491,7 +629,9 @@ export function MarkdownSettings() {
         <p className="mb-2 rounded-md bg-accent-soft px-3 py-2 text-[11px] leading-relaxed text-accent">
           {t("开关即时生效（编辑器按当前配置重新渲染）。覆盖常用 Markdown 扩展。")}
         </p>
+        <PrefSwitch k="enableLinkify" label={t("自动识别链接")} hint={t("导出与渲染 HTML 时自动把 URL 转为可点击链接")} />
         <PrefSwitch k="enableInlineMath" label={t("内联数学公式")} hint={t("$...$ 行内公式（块级 $$ 始终支持）")} />
+        <PrefSwitch k="enableCodeBlockMath" label={t("Code Block Math")} hint={t("将 ```math 代码块渲染为数学公式块")} />
         <PrefSwitch k="enableHighlight" label={t("高亮")} hint={t("==高亮文字==")} />
         <PrefSwitch k="enableSuperscript" label={t("上标")} hint={t("^上标^")} />
         <PrefSwitch k="enableSubscript" label={t("下标")} hint={t("~下标~")} />
@@ -531,26 +671,98 @@ export function MarkdownSettings() {
           hint={t("在编辑区代码块左侧显示行号标尺")}
           def={false}
         />
+        <PrefSwitch
+          k="codeBlockWrap"
+          label={t("代码块自动换行")}
+          hint={t("长代码行自动折行显示而非横向滚动")}
+          def={false}
+        />
+        <PrefSwitch
+          k="codeBlockShiftTab"
+          label={t("使用 Shift+Tab 减少代码缩进")}
+          hint={t("在代码块中按 Tab 增加缩进、Shift+Tab 减少缩进")}
+        />
+        <Row
+          label={t("代码缩进宽度")}
+          hint={t("代码块内按 Tab 插入或减少的空格数")}
+          control={
+            <Select
+              value={String(prefs.codeIndentSize ?? 4)}
+              onChange={(v) => setPref("codeIndentSize", Number(v))}
+              ariaLabel={t("代码缩进宽度")}
+              options={[
+                ["2", t("2 空格")],
+                ["4", t("4 空格")],
+              ]}
+            />
+          }
+        />
       </Section>
 
       <Section title={t("公式")}>
         <PrefSwitch
-          k="autoNumberingForMath"
-          label={t("公式自动编号")}
-          hint={t("为块级 $$ 公式右侧添加自动序号 (1), (2)…")}
+          k="enablePhysicsPackage"
+          label={t("启用 physics 物理宏包")}
+          hint={t("支持 \\dd, \\dv, \\pdv, \\bra, \\ket, \\abs 等常用物理宏")}
           def={false}
+        />
+        <Row
+          label={t("公式自动编号")}
+          hint={t("控制块级公式右侧是否显示序号")}
+          control={
+            <Select
+              value={numberingMode}
+              onChange={(v) => setPref("autoNumberingMode", v)}
+              ariaLabel={t("公式自动编号")}
+              options={[
+                ["none", t("不启用自动编号")],
+                ["all", t("为全部块级公式编号")],
+                ["ams", t("仅对含 \\label / \\tag 公式编号")],
+              ]}
+            />
+          }
+        />
+        <Row
+          label={t("导出 HTML 时的公式输出")}
+          hint={t("选择导出 HTML 或复制为 HTML 时 KaTeX 渲染形式")}
+          control={
+            <Select
+              value={String(prefs.exportHtmlMathFormat ?? "html")}
+              onChange={(v) => setPref("exportHtmlMathFormat", v)}
+              ariaLabel={t("导出 HTML 公式输出")}
+              options={[
+                ["html", "HTML + CSS"],
+                ["mathml", "MathML"],
+              ]}
+            />
+          }
         />
       </Section>
 
       <Section title={t("智能标点")}>
         <Row
+          label={t("转换时机")}
+          hint={t("控制直引号与 -- 破折号在何时转换")}
+          control={
+            <Select
+              value={String(prefs.smartyPantsTiming ?? "input")}
+              onChange={(v) => setPref("smartyPantsTiming", v)}
+              ariaLabel={t("智能标点转换时机")}
+              options={[
+                ["input", t("输入时实时转换")],
+                ["render", t("仅导出与渲染 HTML 时转换")],
+              ]}
+            />
+          }
+        />
+        <Row
           label={t("智能引号")}
-          hint={t("渲染与导出 HTML 时将直引号转换为弯引号")}
+          hint={t("将直引号转换为弯引号")}
           control={<Switch checked={bool("smartQuotes")} label={t("智能引号")} onChange={toggle("smartQuotes")} />}
         />
         <Row
           label={t("智能破折号")}
-          hint={t("渲染与导出 HTML 时将 -- 转换为破折号")}
+          hint={t("将 -- 转换为破折号")}
           control={<Switch checked={bool("smartDashes")} label={t("智能破折号")} onChange={toggle("smartDashes")} />}
         />
         <Row
@@ -569,17 +781,22 @@ export function MarkdownSettings() {
 
 export function ExportSettings() {
   const { t } = useLang();
+  const prefs = useUi((s) => s.prefs);
+  const setPref = useUi((s) => s.setPref);
   const [pandocVer, setPandocVer] = useState<string | null>(null);
   const [checking, setChecking] = useState(false);
 
-  const checkPandoc = async () => {
+  const pandocPath = String(prefs.pandocPath ?? "");
+  const defaultExportDir = String(prefs.defaultExportDir ?? "");
+
+  const checkPandoc = async (customPath?: string) => {
     if (!isTauri()) {
       setPandocVer("");
       return;
     }
     setChecking(true);
     try {
-      const v = await invoke<string>("pandoc.version");
+      const v = await invoke<string>("pandoc.version", { pandocPath: customPath ?? pandocPath });
       setPandocVer(typeof v === "string" ? v.trim() : "");
     } catch {
       setPandocVer("");
@@ -590,6 +807,7 @@ export function ExportSettings() {
 
   useEffect(() => {
     void checkPandoc();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
@@ -600,17 +818,59 @@ export function ExportSettings() {
           label={t("导出后打开所在目录")}
           hint={t("导出 HTML、长图或 Pandoc 文档后，自动在系统文件管理器中定位目标文件")}
         />
-        <Row
-          label={t("Pandoc 集成")}
-          hint={
-            pandocVer
-              ? t("已检测到 Pandoc v{v}，支持导入与导出 Word / Epub / LaTeX 等格式", { v: pandocVer })
-              : isTauri()
-                ? t("未在系统 PATH 中检测到 Pandoc；导出 Word / Epub / LaTeX 等格式需先安装 Pandoc")
-                : t("Pandoc 扩展格式转换需在桌面端运行")
-          }
-          control={
-            <div className="flex items-center gap-1.5">
+        <div className="border-b border-line py-2.5">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div>
+              <p className="text-[12.5px] text-ink">{t("默认导出文件夹")}</p>
+              <p className="text-[11px] text-ink-muted">{t("留空时由系统默认或当前文档所在目录决定")}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <input
+              value={defaultExportDir}
+              onChange={(e) => setPref("defaultExportDir", e.target.value)}
+              placeholder={t("自动（当前工作区 / 文档目录）")}
+              aria-label={t("默认导出文件夹")}
+              className="h-7 min-w-0 flex-1 rounded-md border border-line bg-field px-2.5 font-mono text-[11.5px] text-ink outline-none focus:border-accent"
+            />
+            {isTauri() && (
+              <button
+                type="button"
+                onClick={async () => {
+                  const res = await fs.openFolderDialog();
+                  if (!res.canceled && res.filePaths[0]) {
+                    setPref("defaultExportDir", res.filePaths[0]);
+                  }
+                }}
+                className="flex h-7 shrink-0 items-center gap-1 rounded-md border border-line px-2 text-[11.5px] text-ink-secondary hover:bg-hover hover:text-ink"
+              >
+                <FolderOpen size={12} /> {t("浏览")}
+              </button>
+            )}
+            {defaultExportDir && (
+              <button
+                type="button"
+                onClick={() => setPref("defaultExportDir", "")}
+                className="h-7 shrink-0 rounded-md border border-line px-2 text-[11.5px] text-ink-muted hover:bg-hover hover:text-ink"
+              >
+                {t("重置")}
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="py-2.5">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[12.5px] text-ink">{t("Pandoc 集成与路径")}</p>
+              <p className="text-[11px] text-ink-muted">
+                {pandocVer
+                  ? t("已检测到 Pandoc v{v}，支持导入与导出 Word / Epub / LaTeX 等格式", { v: pandocVer })
+                  : isTauri()
+                    ? t("未在 PATH 或指定路径检测到 Pandoc；导出 Word / Epub / LaTeX 等格式需先安装")
+                    : t("Pandoc 扩展格式转换需在桌面端运行")}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1.5">
               {isTauri() && !pandocVer && (
                 <button
                   type="button"
@@ -630,8 +890,15 @@ export function ExportSettings() {
                 {t("重新检测")}
               </button>
             </div>
-          }
-        />
+          </div>
+          <input
+            value={pandocPath}
+            onChange={(e) => setPref("pandocPath", e.target.value)}
+            placeholder={t("（自动检测 PATH 中的 pandoc）")}
+            aria-label={t("Pandoc 可执行文件路径")}
+            className="h-7 w-full rounded-md border border-line bg-field px-2.5 font-mono text-[11.5px] text-ink outline-none focus:border-accent"
+          />
+        </div>
       </Section>
 
       <Section title={t("支持格式")}>
@@ -642,7 +909,7 @@ export function ExportSettings() {
             { name: t("HTML (无样式)"), desc: t("纯净语义化 HTML，便于嵌入 CMS 或博客系统") },
             { name: t("长图 (PNG)"), desc: t("高清 2x 视网膜长图渲染，适合社交分享与归档") },
             { name: "Markdown", desc: t("规范化格式后的 Markdown 源文件") },
-            { name: t("Pandoc 扩展格式"), desc: t("配置 Pandoc 后支持 Word (.docx)、Epub、LaTeX、RTF 等") },
+            { name: t("Pandoc 扩展格式"), desc: t("配置 Pandoc 后支持导出 Word (.docx)、OpenOffice、RTF、Epub、LaTeX、MediaWiki、reStructuredText、Textile、OPML") },
           ].map((fmt) => (
             <div key={fmt.name} className="rounded-lg border border-line bg-hover/40 p-3">
               <p className="text-[12.5px] font-medium text-ink">{fmt.name}</p>
@@ -669,6 +936,9 @@ export function AppearanceSettings() {
   const toggleWordCount = useUi((s) => s.toggleWordCount);
   const prefs = useUi((s) => s.prefs);
   const setPref = useUi((s) => s.setPref);
+
+  const uiZoom = Number(prefs.uiZoom ?? 100);
+  const wpm = Number(prefs.wordsPerMinute ?? 300);
 
   return (
     <div>
@@ -711,6 +981,36 @@ export function AppearanceSettings() {
           }
         />
         <Row
+          label={t("全局界面缩放 (Zoom)")}
+          hint={t("整体界面缩放比例")}
+          control={
+            <div className="flex items-center gap-1.5">
+              {uiZoom !== 100 && (
+                <button
+                  type="button"
+                  onClick={() => setPref("uiZoom", 100)}
+                  className="flex h-6 items-center gap-1 rounded border border-line px-1.5 text-[11px] text-ink-muted hover:bg-hover hover:text-ink"
+                >
+                  <RotateCcw size={10} /> 100%
+                </button>
+              )}
+              <Select
+                value={String(uiZoom)}
+                onChange={(v) => setPref("uiZoom", Number(v))}
+                ariaLabel={t("全局界面缩放")}
+                options={[
+                  ["80", "80%"],
+                  ["90", "90%"],
+                  ["100", "100%"],
+                  ["110", "110%"],
+                  ["125", "125%"],
+                  ["150", "150%"],
+                ]}
+              />
+            </div>
+          }
+        />
+        <Row
           label={t("编辑区宽度")}
           hint={t("长文写作的最佳行宽")}
           control={
@@ -719,6 +1019,7 @@ export function AppearanceSettings() {
               onChange={(v) => setEditorWidth(v as keyof typeof EDITOR_WIDTHS)}
               ariaLabel={t("编辑区宽度")}
               options={[
+                ["auto", t("自动")],
                 ["standard", t("标准 · 860px")],
                 ["wide", t("宽 · 1040px")],
                 ["wider", t("更宽 · 1240px")],
@@ -757,20 +1058,32 @@ export function AppearanceSettings() {
         />
         <Row
           label={t("阅读速度")}
-          hint={t("状态栏预估阅读时长的参考基准")}
+          hint={t("状态栏预估阅读时长的参考基准（词/分钟）")}
           control={
-            <Select
-              value={String(prefs.wordsPerMinute ?? 300)}
-              onChange={(v) => setPref("wordsPerMinute", Number(v))}
-              ariaLabel={t("阅读速度")}
-              options={[
-                ["200", t("200 词/分钟 (精读)")],
-                ["300", t("300 词/分钟 (标准)")],
-                ["380", t("380 词/分钟 (常规)")],
-                ["400", t("400 词/分钟 (快速)")],
-                ["500", t("500 词/分钟 (速览)")],
-              ]}
-            />
+            <div className="flex items-center gap-1.5">
+              <input
+                type="number"
+                min={50}
+                max={2000}
+                step={10}
+                value={wpm}
+                onChange={(e) => {
+                  const n = Math.max(50, Math.min(2000, Number(e.target.value) || 300));
+                  setPref("wordsPerMinute", n);
+                }}
+                aria-label={t("阅读速度")}
+                className="h-7 w-[72px] rounded-md border border-line bg-field px-2 text-right text-[12px] tabular-nums text-ink outline-none focus:border-accent"
+              />
+              {wpm !== 300 && (
+                <button
+                  type="button"
+                  onClick={() => setPref("wordsPerMinute", 300)}
+                  className="h-7 rounded-md border border-line px-2 text-[11px] text-ink-muted hover:bg-hover hover:text-ink"
+                >
+                  {t("重置")}
+                </button>
+              )}
+            </div>
           }
         />
       </Section>

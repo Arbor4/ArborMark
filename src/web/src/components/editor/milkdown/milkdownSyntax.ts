@@ -476,6 +476,18 @@ export const syntaxPlugins = [
   alertSchema,
 ].flat();
 
+/** ```math 代码块转换为 math_block（当启用 Code Block Math 时）。 */
+function remarkCodeBlockMath() {
+  return (tree: any) => {
+    visit(tree, "code", (node: any, index: number | undefined, parent: any) => {
+      if (!parent || index == null) return;
+      if (String(node.lang ?? "").trim().toLowerCase() === "math") {
+        parent.children.splice(index, 1, { type: "math", value: node.value ?? "" });
+      }
+    });
+  };
+}
+
 /** 依据偏好构建语法插件集合（开关变更时由编辑器重挂载生效）。 */
 export function buildSyntaxPlugins(prefs: Record<string, boolean | string | number>): any[] {
   const enabled = (k: string, def = true) => {
@@ -486,9 +498,11 @@ export function buildSyntaxPlugins(prefs: Record<string, boolean | string | numb
   const superscript = enabled("enableSuperscript");
   const subscript = enabled("enableSubscript");
   const alert = enabled("enableAlert");
+  const codeBlockMath = enabled("enableCodeBlockMath");
   const plugins: any[] = [
     $remark("remarkInlineExt", () => () => remarkInlineExt({ highlight, superscript, subscript })),
   ];
+  if (codeBlockMath) plugins.push($remark("remarkCodeBlockMath", () => remarkCodeBlockMath));
   if (highlight) plugins.push(markSchema);
   if (superscript) plugins.push(superscriptSchema);
   if (subscript) plugins.push(subscriptSchema);

@@ -133,15 +133,56 @@ async function localizeNetwork(url: string): Promise<string | null> {
   }
 }
 
-/** 桌面端：把真实图片路径复制进目标目录（含模板改名），返回插入 Markdown。 */
+/** 读取文档开头 YAML Front Matter 中的图床上传提示（typora-copy-images-to: upload / upload-images: true）。 */
+function yamlRequestsUpload(): boolean {
+  const content = useWorkspace.getState().content ?? "";
+  const m = /^---\r?\n([\s\S]*?)\r?\n---/.exec(content);
+  if (!m) return false;
+  const yaml = m[1];
+  return /^\s*typora-copy-images-to\s*:\s*upload\b/im.test(yaml) || /^\s*upload-images\s*:\s*true\b/im.test(yaml);
+}
+
+/** 调用配置的图床 CLI（PicGo / 自定义命令）上传本地图片，返回成功 URL 映射。 */
+async function uploadLocalImages(paths: string[]): Promise<Map<string, string>> {
+  const result = new Map<string, string>();
+  if (!isTauri() || paths.length === 0) return result;
+  const prefs = useUi.getState().prefs;
+  const uploader = String(prefs.imgUploader ?? "none");
+  const command = String(prefs.imgUploadCommand ?? "");
+  if (uploader === "none") {
+    useUi.getState().toast(t("img.uploadUnavailable"), "info");
+    return result;
+  }
+  try {
+    const resp = await invoke<{ ok: boolean; urls?: string[]; error?: string }>("images.uploadCustom", {
+      paths,
+      uploader,
+      command,
+    });
+    if (resp?.ok && Array.isArray(resp.urls) && resp.urls.length > 0) {
+      paths.forEach((p, idx) => {
+        const url = resp.urls![idx] ?? resp.urls![0];
+        if (url) result.set(p, url);
+      });
+    } else if (resp?.error) {
+      useUi.getState().toast(`图床上传失败：${resp.error}`, "warning");
+    }
+  } catch (err) {
+    useUi.getState().toast(`图床上传异常：${String(err)}`, "warning");
+  }
+  return result;
+}
+
+/** 桌面端：把真实图片路径复制进目标目录（含模板改名）或上传图床，返回插入 Markdown。 */
 export async function insertImagePaths(paths: string[]): Promise<string> {
   const pref = imagePrefs();
   const target = imageTargetDir();
   const lines: string[] = [];
-  if (pref.action === "upload") {
-    useUi.getState().toast(t("img.uploadUnavailable"), "info");
-  }
-  const shouldCopy = pref.copy && pref.applyLocal && isTauri() && pref.action !== "upload";
+  const wantUpload = pref.action === "upload" || (pref.yamlUpload && yamlRequestsUpload());
+  const localPaths = paths.filter((p) => !/^https?:/i.test(p));
+  const uploadedMap = wantUpload && isTauri() ? await uploadLocalImages(localPaths) : new Map<string, string>();
+
+  const shouldCopy = pref.copy && pref.applyLocal && isTauri() && !wantUpload;
   if (shouldCopy) await fs.createDir(target).catch(() => false);
   for (let i = 0; i < paths.length; i++) {
     const src = paths[i];
@@ -149,6 +190,11 @@ export async function insertImagePaths(paths: string[]): Promise<string> {
     if (isNet) {
       const local = pref.applyNetwork ? await localizeNetwork(src) : null;
       lines.push(imageMarkdown(local ? destFor(local) : src, altFor(pathUtil.name(src))));
+      continue;
+    }
+    const remoteUrl = uploadedMap.get(src);
+    if (remoteUrl) {
+      lines.push(imageMarkdown(pref.escape ? escapeUrl(remoteUrl) : remoteUrl, altFor(pathUtil.name(src))));
       continue;
     }
     if (shouldCopy) {

@@ -47,7 +47,7 @@ import "katex/dist/katex.min.css";
 
 /** 语法扩展签名：变更时触发编辑器重挂载。 */
 export function syntaxSignature(prefs: Record<string, boolean | string | number>): string {
-  const keys = ["enableHighlight", "enableSuperscript", "enableSubscript", "enableAlert", "enableDiagram", "enableEmoji", "blockHTML", "enableInlineMath", "preserveLineBreak", "unorderedListMarker"];
+  const keys = ["enableHighlight", "enableSuperscript", "enableSubscript", "enableAlert", "enableDiagram", "enableEmoji", "blockHTML", "enableInlineMath", "enableCodeBlockMath", "preserveLineBreak", "unorderedListMarker"];
   return keys.map((k) => `${k}=${prefs[k] ?? "def"}`).join("|");
 }
 
@@ -106,6 +106,112 @@ const rightClickGuardPlugin = $prose(() => {
   });
 });
 
+/**
+ * 编辑态偏好行为插件：
+ * - 智能引号 / 智能破折号（输入时转换，跳过代码块与行内代码）；
+ * - 成对符号自动补全（括号、引号与 Markdown 行内符号）；
+ * - copyMarkdownByDefault（复制选区时默认写入 Markdown 源码）；
+ * - copyCutWholeLine（无选区时复制或剪切当前段落/块）。
+ */
+const editorBehaviorPlugin = $prose((ctx) => {
+  const PAIRS: Record<string, string> = { "(": ")", "[": "]", "{": "}", "`": "`" };
+  return new Plugin({
+    props: {
+      handleTextInput: (view, from, to, text) => {
+        if (from !== to || text.length !== 1) return false;
+        const { state } = view;
+        const $from = state.doc.resolve(from);
+        const parentName = $from.parent.type.name;
+        if (parentName === "code_block" || parentName === "frontmatter") return false;
+        const inInlineCode = $from.marks().some((m) => m.type.name === "inlineCode");
+        if (inInlineCode) return false;
+
+        const prefs = useUi.getState().prefs;
+        const timing = String(prefs.smartyPantsTiming ?? "input");
+
+        // 智能破折号：-- → —
+        if (timing !== "render" && prefs.smartDashes !== false && text === "-" && $from.parentOffset > 0) {
+          const prevChar = state.doc.textBetween(from - 1, from);
+          if (prevChar === "-") {
+            view.dispatch(state.tr.insertText("—", from - 1, to));
+            return true;
+          }
+        }
+
+        // 智能引号：" / ' → “ ” / ‘ ’
+        if (timing !== "render" && prefs.smartQuotes !== false && (text === '"' || text === "'")) {
+          const prevChar = $from.parentOffset > 0 ? state.doc.textBetween(from - 1, from) : "";
+          const isOpen = !prevChar || /[\s(\[{—\u2014]/.test(prevChar);
+          const ch = text === '"' ? (isOpen ? "“" : "”") : (isOpen ? "‘" : "’");
+          view.dispatch(state.tr.insertText(ch, from, to));
+          return true;
+        }
+
+        // 成对符号补全
+        const closer = PAIRS[text];
+        if (closer) {
+          if (text === "`") {
+            if (prefs.autoPairMarkdown === false) return false;
+            // 行首连敲 ``` 时不干预代码块输入规则
+            const lineBefore = $from.parent.textContent.slice(0, $from.parentOffset);
+            if (/^`*$/.test(lineBefore)) return false;
+          } else if (prefs.autoPair === false) {
+            return false;
+          }
+          const tr = state.tr.insertText(text + closer, from, to);
+          tr.setSelection(TextSelection.create(tr.doc, from + 1));
+          view.dispatch(tr);
+          return true;
+        }
+        return false;
+      },
+      handleDOMEvents: {
+        copy: (view, event) => {
+          const prefs = useUi.getState().prefs;
+          const { selection, doc, schema } = view.state;
+          if (selection.empty) {
+            if (prefs.copyCutWholeLine === false) return false;
+            const { $from } = selection;
+            if (!$from.parent.isTextblock) return false;
+            const text = $from.parent.textContent + "\n";
+            event.clipboardData?.setData("text/plain", text);
+            event.preventDefault();
+            return true;
+          }
+          if (prefs.copyMarkdownByDefault === true) {
+            const slice = doc.slice(selection.from, selection.to);
+            const wrapped = schema.topNodeType.createAndFill(null, slice.content) ?? schema.topNodeType.create(null, slice.content);
+            const md = ctx.get(serializerCtx)(wrapped);
+            event.clipboardData?.setData("text/plain", md);
+            event.preventDefault();
+            return true;
+          }
+          return false;
+        },
+        cut: (view, event) => {
+          const prefs = useUi.getState().prefs;
+          if (prefs.copyCutWholeLine === false) return false;
+          if (!view.editable) return false;
+          const { selection, doc, schema } = view.state;
+          if (!selection.empty) return false;
+          const { $from } = selection;
+          if (!$from.parent.isTextblock || $from.depth < 1) return false;
+          const text = $from.parent.textContent + "\n";
+          event.clipboardData?.setData("text/plain", text);
+          const pos = $from.before($from.depth);
+          const end = pos + $from.parent.nodeSize;
+          const tr = view.state.tr.delete(pos, end);
+          if (tr.doc.content.size === 0) tr.insert(0, schema.nodes.paragraph.create());
+          const caret = Math.min(pos, tr.doc.content.size);
+          view.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(caret), 1)));
+          event.preventDefault();
+          return true;
+        },
+      },
+    },
+  });
+});
+
 export function MilkdownEditor() {
   const containerRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<Editor | null>(null);
@@ -149,7 +255,12 @@ export function MilkdownEditor() {
   const lineWrapping = useUi((s) => s.prefs.lineWrapping);
   const spellcheck = useUi((s) => s.prefs.spellcheck);
   const showLineNumbersForFence = useUi((s) => s.prefs.showLineNumbersForFence === true);
-  const autoNumberingForMath = useUi((s) => s.prefs.autoNumberingForMath === true);
+  const codeBlockWrap = useUi((s) => s.prefs.codeBlockWrap === true);
+  const autoNumberingMode = useUi((s) => {
+    const mode = String(s.prefs.autoNumberingMode ?? "");
+    if (mode === "all" || mode === "ams" || mode === "none") return mode;
+    return s.prefs.autoNumberingForMath === true ? "all" : "none";
+  });
 
   // 空文档占位提示：仅单个空段落且可编辑时显示
   const updateEmptyHint = () => {
@@ -294,6 +405,7 @@ export function MilkdownEditor() {
       .use(clipboard)
       .use(pasteCaretPlugin)
       .use(rightClickGuardPlugin)
+      .use(editorBehaviorPlugin)
       .use(cursor)
       .use(math)
       .use(buildSyntaxPlugins(prefs))
@@ -579,7 +691,7 @@ export function MilkdownEditor() {
     <div className="absolute inset-0 overflow-y-auto bg-editor">
       <div
         ref={containerRef}
-        className={`am-milkdown-host mx-auto px-10 pt-10 pb-24 ${focusMode ? "am-focus-mode" : ""} ${indentFirstLine ? "am-indent-first" : ""} ${lineWrapping === false ? "am-no-wrap" : ""} ${showLineNumbersForFence ? "am-fence-linenos" : ""} ${autoNumberingForMath ? "am-math-numbered" : ""}`}
+        className={`am-milkdown-host mx-auto px-10 pt-10 pb-24 ${focusMode ? "am-focus-mode" : ""} ${indentFirstLine ? "am-indent-first" : ""} ${lineWrapping === false ? "am-no-wrap" : ""} ${showLineNumbersForFence ? "am-fence-linenos" : ""} ${codeBlockWrap ? "am-codeblock-wrap" : ""} ${autoNumberingMode !== "none" ? "am-math-numbered" : ""} ${autoNumberingMode === "ams" ? "am-math-ams" : ""}`}
         style={{ maxWidth: EDITOR_WIDTHS[editorWidth], fontSize: `${fontSize}px` }}
         data-testid="milkdown-host"
       />

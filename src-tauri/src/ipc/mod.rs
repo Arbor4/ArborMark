@@ -219,10 +219,11 @@ pub async fn ipc_invoke(
         "library.newFileUnder" => library::new_file_under(&payload),
         "library.showProperty" => library::show_property(),
 
-        // ---- pandoc 导入 ----
-        "pandoc.version" => pandoc::version(),
+        // ---- pandoc 导入与导出 ----
+        "pandoc.version" => pandoc::version(Some(&state), Some(&payload)),
         "pandoc.setVersion" => pandoc::set_version(&payload),
         "pandoc.import" => pandoc::import(&app, &state, &payload),
+        "pandoc.export" => pandoc::export(&state, &payload),
 
         // ---- images / image ----
         "images.addToBundle" => images::add_to_bundle(&window, &state, &payload),
@@ -235,6 +236,7 @@ pub async fn ipc_invoke(
         "images.getScale" => images::get_scale(),
         "images.iPicValidateBeforeUpload" => images::i_pic_validate_before_upload(),
         "images.upload" => images::upload(),
+        "images.uploadCustom" => images::upload_custom(&payload),
         "images.startCopyAllImages" => images::start_copy_all_images(),
         "image.saveSVG" => images::save_svg(&payload),
         "image.saveSVGDialog" => images::save_svg_dialog(&app, &payload),
@@ -297,7 +299,10 @@ pub async fn ipc_invoke(
         "setting.getUserDict" => setting::get_user_dict(),
         "setting.getUserDictionaryPath" => setting::get_user_dictionary_path(),
         "setting.getUnsavedDraftsPath" => setting::get_unsaved_drafts_path(),
-        "setting.checkUpdates" => misc::check_for_updates().await,
+        "setting.openConfigFolder" => setting::open_config_folder(),
+        "setting.saveUnsavedDraft" => setting::save_unsaved_draft(&payload),
+        "setting.latestUnsavedDraft" => setting::latest_unsaved_draft(),
+        "setting.checkUpdates" => misc::check_for_updates(&payload).await,
         "setting.resetAllDialogWarnings" => setting::reset_plain(&state, &["noHintForOpenLink"]),
         "setting.resetAdvancedSettings" => setting::reset_plain(&state, &[]),
         "setting.downloadDict" => setting::download_dict(&app, &payload),
@@ -324,7 +329,7 @@ pub async fn ipc_invoke(
         "sendLog" => misc::log_message("info", &payload),
         "addBackup" => misc::log_message("info", &payload),
         "app.log" => misc::log_message("info", &payload),
-        "updater.checkForUpdates" => misc::check_for_updates().await,
+        "updater.checkForUpdates" => misc::check_for_updates(&payload).await,
         "quit" => {
             let windows = app.webview_windows();
             if windows.is_empty() {
@@ -399,6 +404,10 @@ pub async fn ipc_invoke(
         "export.destroyPrintView" => export::destroy_print_view(&app, &state, &payload),
         "export.prepareImageCapture" => export::prepare_image_capture(&app, &state, &payload).await,
         "export.captureImage" => export::capture_image(&app, &state, &payload).await,
+        "export.docx" | "export.odt" | "export.rtf" | "export.epub" | "export.latex"
+        | "export.mediawiki" | "export.rst" | "export.textile" | "export.opml" => {
+            pandoc::export(&state, &payload)
+        }
 
         // ---- 尚未迁移的域 ----
         other if other.starts_with("export.") => export::handle(other, &payload),

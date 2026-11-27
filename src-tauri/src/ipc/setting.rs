@@ -409,6 +409,65 @@ pub fn get_unsaved_drafts_path() -> Result<Value, String> {
     Ok(json!(dir.to_string_lossy()))
 }
 
+/// `setting.openConfigFolder`：在文件管理器中打开用户数据/配置目录。
+pub fn open_config_folder() -> Result<Value, String> {
+    let dir = crate::protocol::data_root().join("userData");
+    let _ = std::fs::create_dir_all(&dir);
+    open::that(&dir).map_err(|e| e.to_string())?;
+    Ok(json!(true))
+}
+
+/// `setting.saveUnsavedDraft`：将未保存内容暂存到草稿目录。
+pub fn save_unsaved_draft(payload: &Value) -> Result<Value, String> {
+    let content = payload
+        .get("content")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let name = payload
+        .get("name")
+        .and_then(Value::as_str)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("autosave-draft.md");
+    let safe_name: String = name
+        .chars()
+        .map(|c| if matches!(c, '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|') { '_' } else { c })
+        .collect();
+    let dir = crate::protocol::data_root().join("userData").join("drafts");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let path = dir.join(safe_name);
+    std::fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(json!(path.to_string_lossy()))
+}
+
+/// `setting.latestUnsavedDraft`：读取最新草稿内容与文件名。
+pub fn latest_unsaved_draft() -> Result<Value, String> {
+    let drafts = crate::protocol::data_root().join("userData").join("drafts");
+    let latest = std::fs::read_dir(&drafts)
+        .ok()
+        .and_then(|entries| {
+            entries
+                .flatten()
+                .filter(|e| e.path().is_file())
+                .map(|e| e.path())
+                .max_by_key(|p| {
+                    p.metadata()
+                        .and_then(|m| m.modified())
+                        .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+                })
+        });
+    match latest {
+        Some(path) => {
+            let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+            let name = path
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "draft.md".to_string());
+            Ok(json!({ "found": true, "path": path.to_string_lossy(), "name": name, "content": content }))
+        }
+        None => Ok(json!({ "found": false })),
+    }
+}
+
 /// `setting.resetAllDialogWarnings` / `resetAdvancedSettings`：清空相关设置键。
 pub fn reset_plain(state: &State<'_, AppState>, keys: &[&str]) -> Result<Value, String> {
     for key in keys {

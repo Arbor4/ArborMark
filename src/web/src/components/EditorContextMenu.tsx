@@ -4,11 +4,17 @@ import {
   Link2, Table2, Quote, FileCode2, Type, CheckSquare,
   Heading1, Heading2, Heading3, Heading4, List, ListOrdered, ListTodo,
   Minus, ClipboardCopy, Pilcrow, Globe, Search, ImagePlus, Sigma, Workflow,
+  Hash, Check, ChevronsDownUp, ChevronsUpDown, Replace,
 } from "lucide-react";
+import { selectAll } from "@codemirror/commands";
+import { foldAll, unfoldAll } from "@codemirror/language";
 import { ContextMenu, type MenuItem } from "./common";
 import { toolbar } from "./editor/toolbarCommands";
 import { copySelectionAs, selectionMarkdown, stripMarkdown } from "./editor/selectionCopy";
+import { getCm6 } from "./editor/activeEditor";
+import { readClipboardText, writeClipboardText } from "@/bridge/clipboard";
 import { readConfig, enabledEngines, openSearch } from "@/bridge/webSearch";
+import { useFind } from "@/stores/find";
 import { useUi } from "@/stores/ui";
 import { useLang } from "@/bridge/i18n";
 
@@ -37,14 +43,63 @@ export function formatShortcut(combo: string): string {
   }
 }
 
-/** 编辑区右键菜单：经典分组，可折叠（段落 / 格式 / 插入 / 复制为）。 */
-export function useEditorContextMenu() {
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+function cmSelectedText(): string {
+  const v = getCm6();
+  if (!v) return "";
+  const { from, to } = v.state.selection.main;
+  return from < to ? v.state.sliceDoc(from, to) : "";
+}
+
+function cmCopyOrCut(cut: boolean) {
+  const v = getCm6();
+  if (!v) return;
+  const { from, to } = v.state.selection.main;
+  let cFrom = from;
+  let cTo = to;
+  if (from === to) {
+    if (!useUi.getState().prefs.copyCutWholeLine) return;
+    const line = v.state.doc.lineAt(from);
+    cFrom = line.from;
+    cTo = Math.min(line.to + 1, v.state.doc.length);
+  }
+  const text = v.state.sliceDoc(cFrom, cTo);
+  if (text) void writeClipboardText(text);
+  if (cut && !v.state.readOnly && cFrom < cTo) {
+    v.dispatch({
+      changes: { from: cFrom, to: cTo, insert: "" },
+      selection: { anchor: cFrom },
+      scrollIntoView: true,
+    });
+  }
+  v.focus();
+}
+
+function cmPaste() {
+  void readClipboardText().then((text) => {
+    if (text == null) return;
+    const v = getCm6();
+    if (!v || v.state.readOnly) return;
+    const { from, to } = v.state.selection.main;
+    v.dispatch({
+      changes: { from, to, insert: text },
+      selection: { anchor: from + text.length },
+      scrollIntoView: true,
+    });
+    v.focus();
+  });
+}
+
+/** 编辑区右键菜单：代码模式展示精简代码菜单，左侧行号栏展示行号/折叠菜单，Markdown 展示完整排版菜单。 */
+export function useEditorContextMenu({ isCodeFile = false }: { isCodeFile?: boolean } = {}) {
+  const [pos, setPos] = useState<{ x: number; y: number; gutter: boolean } | null>(null);
+  const lineNumbers = useUi((s) => s.lineNumbers);
   const { t } = useLang();
 
   const onContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setPos({ x: e.clientX, y: e.clientY });
+    const target = e.target as HTMLElement | null;
+    const gutter = Boolean(target?.closest(".cm-gutters"));
+    setPos({ x: e.clientX, y: e.clientY, gutter });
   }, []);
 
   const openTablePicker = () => {
@@ -68,17 +123,60 @@ export function useEditorContextMenu() {
   ];
 
   const wsCfg = readConfig();
+  const getSearchQuery = () => (isCodeFile ? cmSelectedText() : stripMarkdown(selectionMarkdown()));
   const searchGroup: MenuItem[] = wsCfg.enabled && wsCfg.contextMenu
     ? [{
         id: "websearch", label: t("ctx.webSearch"), icon: <Globe size={13} />,
         children: enabledEngines(wsCfg).map((e) => ({
           id: `ws-${e.id}`, label: e.name, icon: <Search size={13} />,
-          run: () => { openSearch(e, stripMarkdown(selectionMarkdown())); },
+          run: () => { openSearch(e, getSearchQuery()); },
         })),
       }]
     : [];
 
-  const items: MenuItem[] = [
+  const lineNumberItem: MenuItem = {
+    id: "toggle-linenos",
+    label: t(lineNumbers ? "ctx.hideLineNumbers" : "ctx.showLineNumbers"),
+    icon: lineNumbers ? <Check size={13} /> : <Hash size={13} />,
+    run: () => useUi.getState().toggleLineNumbers(),
+  };
+
+  const foldItems: MenuItem[] = [
+    {
+      id: "fold-all", label: t("ctx.foldAll"), icon: <ChevronsDownUp size={13} />,
+      run: () => { const v = getCm6(); if (v) { foldAll(v); v.focus(); } },
+    },
+    {
+      id: "unfold-all", label: t("ctx.unfoldAll"), icon: <ChevronsUpDown size={13} />,
+      run: () => { const v = getCm6(); if (v) { unfoldAll(v); v.focus(); } },
+    },
+  ];
+
+  const gutterItems: MenuItem[] = [
+    lineNumberItem,
+    { id: "sep-g", label: "", separator: true },
+    ...foldItems,
+  ];
+
+  const codeItems: MenuItem[] = [
+    { id: "cut", label: t("ctx.cut"), shortcut: formatShortcut("X"), icon: <Scissors size={13} />, run: () => cmCopyOrCut(true) },
+    { id: "copy", label: t("ctx.copy"), shortcut: formatShortcut("C"), icon: <Copy size={13} />, run: () => cmCopyOrCut(false) },
+    { id: "paste", label: t("ctx.paste"), shortcut: formatShortcut("V"), icon: <ClipboardPaste size={13} />, run: cmPaste },
+    { id: "sep-c1", label: "", separator: true },
+    {
+      id: "selectall", label: t("ctx.selectAll"), shortcut: formatShortcut("A"), icon: <Type size={13} />,
+      run: () => { const v = getCm6(); if (v) { selectAll(v); v.focus(); } },
+    },
+    { id: "sep-c2", label: "", separator: true },
+    { id: "find", label: t("ctx.find"), shortcut: formatShortcut("F"), icon: <Search size={13} />, run: () => useFind.getState().setOpen(true) },
+    { id: "replace", label: t("ctx.replace"), shortcut: formatShortcut("R"), icon: <Replace size={13} />, run: () => useFind.getState().openReplace() },
+    { id: "sep-c3", label: "", separator: true },
+    lineNumberItem,
+    ...foldItems,
+    ...(searchGroup.length ? [{ id: "sep-ws", label: "", separator: true } as MenuItem, ...searchGroup] : []),
+  ];
+
+  const mdItems: MenuItem[] = [
     {
       id: "copyas", label: t("ctx.copyAs"), icon: <ClipboardCopy size={13} />,
       children: [
@@ -128,6 +226,14 @@ export function useEditorContextMenu() {
     },
   ];
 
-  const menu = pos ? <ContextMenu x={pos.x} y={pos.y} items={items} grid={grid} onClose={() => setPos(null)} /> : null;
+  const menu = pos ? (
+    <ContextMenu
+      x={pos.x}
+      y={pos.y}
+      items={pos.gutter ? gutterItems : isCodeFile ? codeItems : mdItems}
+      grid={pos.gutter || isCodeFile ? undefined : grid}
+      onClose={() => setPos(null)}
+    />
+  ) : null;
   return { onContextMenu, menu };
 }

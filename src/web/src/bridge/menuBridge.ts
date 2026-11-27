@@ -138,26 +138,59 @@ async function doExport(opts: { type: string }) {
       return;
     }
     // Office / Epub 等需要 Pandoc
-    if (isTauri()) {
+    const PANDOC_EXT: Record<string, [string, string]> = {
+      docx: ["docx", "Word 文档 (*.docx)"],
+      word: ["docx", "Word 文档 (*.docx)"],
+      odt: ["odt", "OpenOffice (*.odt)"],
+      openoffice: ["odt", "OpenOffice (*.odt)"],
+      rtf: ["rtf", "RTF 文档 (*.rtf)"],
+      epub: ["epub", "EPUB 电子书 (*.epub)"],
+      latex: ["tex", "LaTeX 文档 (*.tex)"],
+      tex: ["tex", "LaTeX 文档 (*.tex)"],
+      mediawiki: ["wiki", "MediaWiki (*.wiki)"],
+      rst: ["rst", "reStructuredText (*.rst)"],
+      textile: ["textile", "Textile (*.textile)"],
+      opml: ["opml", "OPML (*.opml)"],
+    };
+    const meta = PANDOC_EXT[type];
+    if (isTauri() && meta) {
       try {
-        const res = await invoke<any>(`export.${type}`, { path: ws().activePath, type });
-        if (res) {
-          const exportPath = typeof res === "string" ? res : ws().activePath ?? "";
-          if (exportPath && ui().prefs.exportOpenFolder !== false) {
+        const { defaultExportPath } = await import("@/bridge/exportUtils");
+        const [ext, filterLabel] = meta;
+        const dlg = await invoke<{ canceled: boolean; filePath: string | null }>("dialog.showSaveDialog", {
+          title: `导出 ${ext.toUpperCase()}`,
+          defaultPath: defaultExportPath(`${name}.${ext}`),
+          filters: [{ name: filterLabel, extensions: [ext] }],
+        }).catch(() => null);
+        if (!dlg || dlg.canceled || !dlg.filePath) return;
+        const res = await invoke<{ ok?: boolean; path?: string }>("pandoc.export", {
+          format: type,
+          outputPath: dlg.filePath,
+          content: md,
+          sourcePath: ws().activePath ?? "",
+          pandocPath: String(ui().prefs.pandocPath ?? ""),
+        });
+        if (res?.ok) {
+          const exportPath = res.path || dlg.filePath;
+          if (ui().prefs.exportOpenFolder !== false) {
             void fs.showInFolder(exportPath);
           }
-          ui().toast(`已导出 ${type.toUpperCase()}`, "success", exportPath ? {
+          ui().toast(`已导出 ${ext.toUpperCase()}`, "success", {
             label: "打开所在文件夹",
             run: () => fs.showInFolder(exportPath),
-          } : undefined);
+          });
           return;
         }
-      } catch {
-        /* fallthrough */
+      } catch (err) {
+        ui().toast(`Pandoc 导出失败：${String(err)}`, "warning", {
+          label: "了解 Pandoc",
+          run: () => fs.openExternal("https://pandoc.org/installing.html"),
+        });
+        return;
       }
     }
     download(`${name}.html`, renderMarkdown(md), "text/html");
-    ui().toast(`${type.toUpperCase()} 需要 Pandoc，已先导出 HTML`, "info", {
+    ui().toast(`${type.toUpperCase()} 导出需要桌面端与 Pandoc，已先导出 HTML`, "info", {
       label: "了解 Pandoc",
       run: () => window.open("https://pandoc.org/installing.html", "_blank"),
     });

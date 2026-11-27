@@ -42,7 +42,7 @@ interface UiState {
   confirmDialog: ConfirmDialogState | null;
   autoSave: boolean;
   fontSize: number;
-  editorWidth: "standard" | "wide" | "wider" | "full";
+  editorWidth: "auto" | "standard" | "wide" | "wider" | "full";
   toolbarVisible: boolean;
   statusBarVisible: boolean;
   wordCountVisible: boolean;
@@ -94,18 +94,25 @@ export const DEFAULT_PREFS: Record<string, boolean | string | number> = {
   autoSaveOnSwitch: true,
   outlineCollapsible: true,
   showHiddenFiles: false,
+  recordRecentHistory: true,
+  dragDropFolderAction: "open",
+  dragDropImportAction: "import",
   // 语法与标点
   smartQuotes: true,
   smartDashes: true,
+  smartyPantsTiming: "input",
   finalNewline: true,
   preserveLineBreak: false,
   indentFirstLine: false,
   remapPunctuation: false,
   autoCheckUpdate: true,
+  updateChannel: "stable",
   restoreSession: true,
   language: "zh-Hans",
   // Markdown 语法扩展（变更触发编辑器重挂载）
+  enableLinkify: true,
   enableInlineMath: true,
+  enableCodeBlockMath: true,
   enableHighlight: true,
   enableSuperscript: true,
   enableSubscript: true,
@@ -114,14 +121,22 @@ export const DEFAULT_PREFS: Record<string, boolean | string | number> = {
   enableEmoji: true,
   blockHTML: true,
   autoNumberingForMath: false,
+  autoNumberingMode: "none",
+  enablePhysicsPackage: false,
+  exportHtmlMathFormat: "html",
   unorderedListMarker: "-",
   defaultCodeLang: "",
   // 编辑器行为
   indentSize: 2,
+  codeIndentSize: 4,
+  codeBlockWrap: false,
+  codeBlockShiftTab: true,
   autoPair: true,
+  autoPairMarkdown: true,
   spellcheck: false,
   lineWrapping: true,
   copyCutWholeLine: true,
+  copyMarkdownByDefault: false,
   zoomOnScroll: true,
   showLineNumbersForFence: false,
   outlineHeadingHighlight: true,
@@ -137,8 +152,14 @@ export const DEFAULT_PREFS: Record<string, boolean | string | number> = {
   imgBase: "doc",
   imgNamePattern: "original",
   imgAltFromName: true,
+  imgUploader: "none",
+  imgUploadCommand: "",
   // 导出与状态
   exportOpenFolder: true,
+  defaultExportDir: "",
+  pandocPath: "",
+  uiZoom: 100,
+  customShortcuts: "{}",
   statusMetric: "words",
   wordsPerMinute: 300,
 };
@@ -156,7 +177,7 @@ function loadPersisted(): Partial<UiState> {
       lineNumbers: parsed.lineNumbers ?? false,
       autoSave: parsed.autoSave ?? true,
       fontSize: parsed.fontSize ?? 16,
-      editorWidth: parsed.editorWidth ?? "standard",
+      editorWidth: parsed.editorWidth && parsed.editorWidth in EDITOR_WIDTHS ? parsed.editorWidth : "auto",
       typewriterMode: parsed.typewriterMode ?? false,
     };
     // 旧版本持久化可能缺 prefs：与 DEFAULT_PREFS 合并；并兼容 restoreSession → startupAction
@@ -197,6 +218,7 @@ function persist(state: UiState) {
 }
 
 export const EDITOR_WIDTHS: Record<UiState["editorWidth"], string> = {
+  auto: "clamp(760px, 72%, 1160px)",
   standard: "860px",
   wide: "1040px",
   wider: "1240px",
@@ -222,7 +244,7 @@ export const useUi = create<UiState>((set, get) => ({
   confirmDialog: null,
   autoSave: true,
   fontSize: 16,
-  editorWidth: "standard",
+  editorWidth: "auto",
   toolbarVisible: false,
   statusBarVisible: true,
   wordCountVisible: true,
@@ -326,6 +348,16 @@ export const useUi = create<UiState>((set, get) => ({
         next.useCRLF = value === "crlf";
       } else if (key === "useCRLF") {
         next.defaultEol = value ? "crlf" : "lf";
+      } else if (key === "autoNumberingMode") {
+        next.autoNumberingForMath = value !== "none";
+      } else if (key === "autoNumberingForMath") {
+        next.autoNumberingMode = value ? (next.autoNumberingMode === "ams" ? "ams" : "all") : "none";
+      } else if (key === "uiZoom") {
+        const z = Math.min(200, Math.max(50, Number(value) || 100));
+        next.uiZoom = z;
+        if (typeof document !== "undefined") {
+          document.documentElement.style.zoom = z === 100 ? "" : `${z}%`;
+        }
       }
       return { prefs: next };
     });

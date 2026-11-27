@@ -10,11 +10,20 @@ import {
   RotateCcw,
   RefreshCw,
   Plus,
+  FolderOpen,
 } from "lucide-react";
 import { useUi } from "@/stores/ui";
 import { exportSettings, pickAndImportSettings } from "@/bridge/settingsTransfer";
 import { CURRENT_VERSION } from "@/bridge/updater";
 import { readConfig, writeConfig, defaultConfig, type WebSearchConfig } from "@/bridge/webSearch";
+import {
+  SHORTCUT_DEFS,
+  getShortcutCombo,
+  setShortcutCombo,
+  resetAllShortcuts,
+  eventToCombo,
+  formatCombo,
+} from "@/bridge/shortcuts";
 import { CelebrationLayer, type CelebrationHandle } from "./Celebration";
 import { showOnboarding } from "../Onboarding";
 import { useLang } from "@/bridge/i18n";
@@ -159,6 +168,17 @@ export function GeneralSettings() {
         />
         <Row label={t("自动检查更新")} control={<Switch checked={bool("autoCheckUpdate")} label={t("自动检查更新")} onChange={(v) => setPref("autoCheckUpdate", v)} />} />
         <Row
+          label={t("接收开发版 / 预览版更新")}
+          hint={t("包含 GitHub Pre-release 测试版本")}
+          control={
+            <Switch
+              checked={prefs.updateChannel === "beta"}
+              label={t("接收开发版更新")}
+              onChange={(v) => setPref("updateChannel", v ? "beta" : "stable")}
+            />
+          }
+        />
+        <Row
           label={t("检查更新")}
           hint={`${t("当前版本")} v${CURRENT_VERSION}`}
           control={
@@ -209,6 +229,22 @@ export function GeneralSettings() {
             </button>
           }
         />
+        {isTauri() && (
+          <Row
+            label={t("打开用户配置目录")}
+            hint={t("查看底层的设置文件、草稿备份与自定义主题文件夹")}
+            control={
+              <button
+                onClick={() => {
+                  invoke("setting.openConfigFolder", {}).catch(() => {});
+                }}
+                className="flex h-7 items-center gap-1.5 rounded-md border border-line px-2.5 text-[12px] text-ink-secondary transition-colors hover:bg-hover hover:text-ink"
+              >
+                <FolderOpen size={13} /> {t("打开目录")}
+              </button>
+            }
+          />
+        )}
       </Section>
       <Section title={t("重置选项")}>
         <Row
@@ -265,41 +301,27 @@ export function GeneralSettings() {
 export function ShortcutSettings() {
   const { t } = useLang();
   const isMac = typeof navigator !== "undefined" && /Macintosh|Mac OS X/.test(navigator.userAgent);
-  const mod = isMac ? "⌘" : "Ctrl+";
-  const groups: { title: string; items: [string, string][] }[] = [
-    {
-      title: t("文件"),
-      items: [
-        ["新建文件", `${mod}N`],
-        ["保存", `${mod}S`],
-        ["快速打开", `${mod}P`],
-        ["全局搜索", isMac ? "⌘⇧F" : "Ctrl+Shift+F"],
-        ["打开文件夹", `${mod}O`],
-      ],
-    },
+  useUi((s) => s.prefs.customShortcuts);
+  const [recordingId, setRecordingId] = useState<string | null>(null);
+
+  const customGroups = ["文件", "视图", "编辑"].map((group) => ({
+    title: t(group),
+    items: SHORTCUT_DEFS.filter((d) => d.group === group),
+  }));
+
+  const staticGroups: { title: string; items: [string, string][] }[] = [
     {
       title: t("段落与标题"),
       items: [
         ["一阶 ~ 六阶标题", isMac ? "⌘1 ~ ⌘6" : "Ctrl+1 ~ 6"],
-        ["普通段落", `${mod}0`],
+        ["普通段落", isMac ? "⌘0" : "Ctrl+0"],
       ],
     },
     {
-      title: t("视图"),
-      items: [
-        ["文件 / 大纲面板", isMac ? "⌘⇧2 / ⌘⇧1" : "Ctrl+Shift+2 / 1"],
-        ["收起 / 展开侧边栏", isMac ? "⌘\\ / ⌘⇧L" : "Ctrl+\\ / Ctrl+Shift+L"],
-        ["编辑 / 源码", `${mod}/`],
-        ["专注模式", isMac ? "⌘⇧D" : "Ctrl+Shift+D"],
-        ["偏好设置", `${mod},`],
-      ],
-    },
-    {
-      title: t("编辑"),
+      title: t("编辑（编辑器内置）"),
       items: [
         ["加粗 / 斜体 / 行内代码", isMac ? "⌘B / I / ⌘E" : "Ctrl+B / I / E"],
         ["删除线", isMac ? "⌘⇧X" : "Ctrl+Shift+X"],
-        ["查找 / 替换（当前文件）", isMac ? "⌘F / ⌘R" : "Ctrl+F / Ctrl+R"],
         ["撤销 / 重做", isMac ? "⌘Z / ⌘⇧Z" : "Ctrl+Z / Ctrl+Shift+Z"],
       ],
     },
@@ -313,20 +335,91 @@ export function ShortcutSettings() {
       ],
     },
   ];
+
   return (
-    <div className="grid grid-cols-2 gap-x-6">
-      {groups.map((g) => (
-        <Section key={g.title} title={g.title}>
-          {g.items.map(([label, keys]) => (
-            <div key={label} className="flex items-center justify-between border-b border-line py-2 last:border-0">
-              <span className="text-[12px] text-ink-secondary">{t(label)}</span>
-              <kbd className="rounded border border-line bg-field px-1.5 py-0.5 font-mono text-[10.5px] text-ink">
-                {t(keys)}
-              </kbd>
-            </div>
-          ))}
-        </Section>
-      ))}
+    <div>
+      <div className="mb-4 flex items-center justify-between gap-2 rounded-md bg-hover px-3 py-2">
+        <p className="text-[11.5px] text-ink-secondary">{t("点击任意全局快捷键按钮即可重新录制组合键（Esc 取消）")}</p>
+        <button
+          type="button"
+          onClick={() => {
+            resetAllShortcuts();
+            setRecordingId(null);
+            useUi.getState().toast(t("已恢复默认快捷键"), "success");
+          }}
+          className="flex h-7 shrink-0 items-center gap-1 rounded-md border border-line bg-elevated px-2.5 text-[11.5px] text-ink-secondary hover:bg-hover hover:text-ink"
+        >
+          <RotateCcw size={12} /> {t("恢复默认")}
+        </button>
+      </div>
+      <div className="grid grid-cols-2 gap-x-6">
+        {customGroups.map((g) => (
+          <Section key={g.title} title={g.title}>
+            {g.items.map((def) => {
+              const isRecording = recordingId === def.id;
+              const combo = getShortcutCombo(def.id);
+              const isEdited = combo !== def.defaultCombo;
+              return (
+                <div key={def.id} className="flex items-center justify-between gap-2 border-b border-line py-2 last:border-0">
+                  <span className="truncate text-[12px] text-ink-secondary">{t(def.label)}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {isEdited && (
+                      <button
+                        type="button"
+                        title={t("恢复默认")}
+                        aria-label={`${t("恢复默认")} ${t(def.label)}`}
+                        onClick={() => setShortcutCombo(def.id, null)}
+                        className="text-ink-muted hover:text-ink"
+                      >
+                        <RotateCcw size={11} />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      data-shortcut-recorder="true"
+                      onClick={() => setRecordingId(isRecording ? null : def.id)}
+                      onBlur={() => setRecordingId(null)}
+                      onKeyDown={(e) => {
+                        if (!isRecording) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (e.key === "Escape") {
+                          setRecordingId(null);
+                          return;
+                        }
+                        const next = eventToCombo(e.nativeEvent);
+                        if (next) {
+                          setShortcutCombo(def.id, next);
+                          setRecordingId(null);
+                        }
+                      }}
+                      className={`rounded border px-2 py-0.5 font-mono text-[10.5px] transition-colors ${
+                        isRecording
+                          ? "border-accent bg-accent-soft text-accent"
+                          : "border-line bg-field text-ink hover:border-accent"
+                      }`}
+                    >
+                      {isRecording ? t("按下快捷键…") : formatCombo(combo, isMac)}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </Section>
+        ))}
+        {staticGroups.map((g) => (
+          <Section key={g.title} title={g.title}>
+            {g.items.map(([label, keys]) => (
+              <div key={label} className="flex items-center justify-between border-b border-line py-2 last:border-0">
+                <span className="text-[12px] text-ink-secondary">{t(label)}</span>
+                <kbd className="rounded border border-line bg-field px-1.5 py-0.5 font-mono text-[10.5px] text-ink">
+                  {t(keys)}
+                </kbd>
+              </div>
+            ))}
+          </Section>
+        ))}
+      </div>
     </div>
   );
 }

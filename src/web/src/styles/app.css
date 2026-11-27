@@ -188,7 +188,7 @@ select:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
+  *:not(.cm-cursorLayer):not(.cm-cursor),
   *::before,
   *::after {
     animation-duration: 0.01ms !important;
@@ -1513,6 +1513,13 @@ div:has(> .am-milkdown-host) {
   outline: none;
   white-space: pre;
 }
+.am-milkdown-host.am-codeblock-wrap .ProseMirror pre.am-codeblock-view,
+.am-milkdown-host.am-codeblock-wrap .ProseMirror pre.am-codeblock-edit,
+.am-milkdown-host.am-codeblock-wrap .am-codeblock-view code,
+.am-milkdown-host.am-codeblock-wrap .am-codeblock-edit code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 .am-codeblock-editing { box-shadow: 0 0 0 2px var(--am-accent-soft); }
 /* highlight.js  token 色（与预览一致） */
 .am-codeblock .hljs-keyword,
@@ -1722,11 +1729,13 @@ div:has(> .am-milkdown-host) {
 .am-milkdown-host.am-math-numbered .ProseMirror {
   counter-reset: am-math-eq;
 }
-.am-milkdown-host.am-math-numbered .ProseMirror .am-math-block {
+.am-milkdown-host.am-math-numbered:not(.am-math-ams) .ProseMirror .am-math-block,
+.am-milkdown-host.am-math-numbered.am-math-ams .ProseMirror .am-math-block[data-math-ams="true"] {
   counter-increment: am-math-eq;
   padding-right: 52px;
 }
-.am-milkdown-host.am-math-numbered .ProseMirror .am-math-block:not(.am-math-editing)::after {
+.am-milkdown-host.am-math-numbered:not(.am-math-ams) .ProseMirror .am-math-block:not(.am-math-editing)::after,
+.am-milkdown-host.am-math-numbered.am-math-ams .ProseMirror .am-math-block[data-math-ams="true"]:not(.am-math-editing)::after {
   content: "(" counter(am-math-eq) ")";
   position: absolute;
   right: 14px;

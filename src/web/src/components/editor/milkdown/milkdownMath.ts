@@ -13,13 +13,38 @@ import type { Node as ProseNode } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
 import { t } from "@/bridge/i18n";
 import { useLightbox } from "@/stores/lightbox";
+import { useUi } from "@/stores/ui";
 import { createZoomButton } from "../imageSrc";
 
-const KATEX_OPTS = { throwOnError: false, strict: false, trust: false, output: "html" as const };
+export const PHYSICS_MACROS: Record<string, string> = {
+  "\\dd": "\\mathrm{d}",
+  "\\dv": "\\frac{\\mathrm{d}#1}{\\mathrm{d}#2}",
+  "\\pdv": "\\frac{\\partial #1}{\\partial #2}",
+  "\\bra": "\\langle #1 |",
+  "\\ket": "| #1 \\rangle",
+  "\\braket": "\\langle #1 | #2 \\rangle",
+  "\\abs": "\\left| #1 \\right|",
+  "\\norm": "\\left\\| #1 \\right\\|",
+  "\\ev": "\\langle #1 \\rangle",
+  "\\qty": "\\left( #1 \\right)",
+};
+
+export function getKatexOptions(displayMode: boolean, outputOverride?: "html" | "mathml" | "htmlAndMathml") {
+  const prefs = useUi.getState().prefs;
+  const physics = prefs.enablePhysicsPackage === true;
+  return {
+    throwOnError: false,
+    strict: false,
+    trust: false,
+    output: (outputOverride ?? "html") as "html" | "mathml" | "htmlAndMathml",
+    displayMode,
+    ...(physics ? { macros: PHYSICS_MACROS } : {}),
+  };
+}
 
 function renderKatex(tex: string, el: HTMLElement, displayMode: boolean) {
   try {
-    katex.render(tex, el, { ...KATEX_OPTS, displayMode });
+    katex.render(tex, el, getKatexOptions(displayMode));
   } catch {
     el.textContent = tex;
     el.classList.add("katex-error");
@@ -37,7 +62,7 @@ function makeLivePreview(target: HTMLElement, badge: HTMLElement, displayMode: b
       return;
     }
     try {
-      katex.render(tex, probe, { ...KATEX_OPTS, throwOnError: true, displayMode });
+      katex.render(tex, probe, { ...getKatexOptions(displayMode), throwOnError: true });
       target.innerHTML = probe.innerHTML;
       badge.style.display = "none";
     } catch {
@@ -242,7 +267,9 @@ export const mathBlockView = $view(mathBlockSchema.node, () => (initialNode, vie
     zoomBtn.style.display = !editing && !!tex.trim() ? "" : "none";
   };
   const render = () => {
-    renderKatex((node.attrs.value as string) ?? "", renderArea, true);
+    const tex = (node.attrs.value as string) ?? "";
+    dom.dataset.mathAms = /\\(label|tag)\b/.test(tex) ? "true" : "false";
+    renderKatex(tex, renderArea, true);
     syncZoomBtn();
   };
 

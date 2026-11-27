@@ -58,10 +58,10 @@ export function EditorArea() {
   const setPickerPos = useUi((s) => s.setTablePickerPos);
 
   const disabled = !activePath;
-  const ctxMenu = useEditorContextMenu();
   const fileName = activePath ? pathUtil.name(activePath) : "";
   const isCodeFile = Boolean(activePath) && !isMarkdownFile(fileName);
   const previewKind = activePath ? getPreviewKind(fileName) : null;
+  const ctxMenu = useEditorContextMenu({ isCodeFile });
   const { t } = useLang();
 
   /* 编辑区 → 大纲 滚动联动：模式/文件切换时清空并重算高亮 */

@@ -29,8 +29,10 @@ function compareVersions(v1: string, v2: string): number {
   return 0;
 }
 
-async function fetchFromBrowserApi(): Promise<UpdateInfo> {
-  const url = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
+async function fetchFromBrowserApi(includeBeta: boolean): Promise<UpdateInfo> {
+  const url = includeBeta
+    ? `https://api.github.com/repos/${GITHUB_REPO}/releases?per_page=10`
+    : `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
   const res = await fetch(url, {
     headers: {
       Accept: "application/vnd.github.v3+json",
@@ -39,7 +41,8 @@ async function fetchFromBrowserApi(): Promise<UpdateInfo> {
   if (!res.ok) {
     throw new Error(`GitHub API HTTP ${res.status}`);
   }
-  const data = await res.json();
+  const raw = await res.json();
+  const data = Array.isArray(raw) ? raw[0] ?? {} : raw;
   const latestTag = String(data.tag_name || "").replace(/^v/i, "");
   const hasUpdate = compareVersions(latestTag, CURRENT_VERSION) > 0;
   return {
@@ -53,6 +56,8 @@ async function fetchFromBrowserApi(): Promise<UpdateInfo> {
 }
 
 export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
+  const channel = String(useUi.getState().prefs.updateChannel ?? "stable");
+  const includeBeta = channel === "beta";
   if (isTauri()) {
     try {
       const res = await invoke<{
@@ -61,7 +66,7 @@ export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
         releaseUrl?: string;
         releaseNotes?: string;
         publishedAt?: string;
-      }>("updater.checkForUpdates");
+      }>("updater.checkForUpdates", { channel });
       const current = res?.currentVersion || CURRENT_VERSION;
       const latest = String(res?.latestVersion || "").replace(/^v/i, "");
       if (latest) {
@@ -78,7 +83,7 @@ export async function checkUpdateFromGitHub(): Promise<UpdateInfo> {
       /* 桌面端原生 curl 失败（例如系统 PAC 代理仅浏览器可见）时，回退到浏览器 fetch */
     }
   }
-  return fetchFromBrowserApi();
+  return fetchFromBrowserApi(includeBeta);
 }
 
 export async function runCheckForUpdates(interactive = true) {

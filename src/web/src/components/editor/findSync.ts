@@ -292,6 +292,10 @@ export function refreshFind() {
   const md = getMilkdown();
   const cm = getCm6();
   if (!md && !cm) return;
+  if (!open && !lastOpen) {
+    if (useFind.getState().count !== 0) useFind.getState().setMatches(0, 0);
+    return;
+  }
   // 以编辑器实际 doc 为缓存键：外部 setContent 时编辑器文档异步同步，
   // 若按 store.content 缓存会在旧文档上算出空区间并永久缓存。
   let docRef: unknown = null;

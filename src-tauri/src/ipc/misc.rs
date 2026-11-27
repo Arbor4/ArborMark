@@ -237,9 +237,13 @@ fn parse_latest_redirect_headers(headers: &str) -> Option<(String, String)> {
     None
 }
 
-fn fetch_latest_release_sync() -> Result<(String, String, String, String), String> {
+fn fetch_latest_release_sync(include_beta: bool) -> Result<(String, String, String, String), String> {
     // 1. 首选 GitHub REST API（提供完整 Markdown 更新日志）
-    let api_url = format!("https://api.github.com/repos/{GITHUB_REPO}/releases/latest");
+    let api_url = if include_beta {
+        format!("https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=10")
+    } else {
+        format!("https://api.github.com/repos/{GITHUB_REPO}/releases/latest")
+    };
     if let Ok(out) = make_curl_command(10)
         .args([
             "-sL",
@@ -255,7 +259,15 @@ fn fetch_latest_release_sync() -> Result<(String, String, String, String), Strin
             let raw = String::from_utf8_lossy(&out.stdout);
             if let Some((body, code)) = raw.rsplit_once('\n') {
                 if code.trim() == "200" {
-                    if let Some(parsed) = parse_github_release_json(body) {
+                    if include_beta {
+                        if let Ok(Value::Array(items)) = serde_json::from_str::<Value>(body) {
+                            if let Some(first) = items.first() {
+                                if let Some(parsed) = parse_github_release_json(&first.to_string()) {
+                                    return Ok(parsed);
+                                }
+                            }
+                        }
+                    } else if let Some(parsed) = parse_github_release_json(body) {
                         return Ok(parsed);
                     }
                 }
@@ -290,10 +302,15 @@ fn fetch_latest_release_sync() -> Result<(String, String, String, String), Strin
 
 /// `updater.checkForUpdates`：通过多源容错（GitHub API → Releases Atom → 302 跳转）检查最新版本，
 /// 规避 WebView CORS 限制与 GitHub API 匿名限流（HTTP 403）。
-pub async fn check_for_updates() -> Result<Value, String> {
+pub async fn check_for_updates(payload: &Value) -> Result<Value, String> {
+    let include_beta = payload
+        .get("channel")
+        .and_then(Value::as_str)
+        .map(|s| s == "beta")
+        .unwrap_or(false);
     let current = env!("CARGO_PKG_VERSION").to_string();
     let (latest, release_url, notes, published_at) =
-        tauri::async_runtime::spawn_blocking(fetch_latest_release_sync)
+        tauri::async_runtime::spawn_blocking(move || fetch_latest_release_sync(include_beta))
             .await
             .map_err(|e| format!("检查更新任务异常: {e}"))??;
     Ok(json!({

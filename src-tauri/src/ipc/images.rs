@@ -264,6 +264,115 @@ pub fn upload() -> Result<Value, String> {
     Ok(json!(false))
 }
 
+/// `images.uploadCustom`：调用 PicGo CLI 或用户自定义命令上传图片，解析标准输出中的 URL 列表。
+pub fn upload_custom(payload: &Value) -> Result<Value, String> {
+    let paths: Vec<String> = payload
+        .get("paths")
+        .and_then(Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    if paths.is_empty() {
+        return Ok(json!({ "ok": false, "urls": [], "error": "缺少待上传图片路径" }));
+    }
+
+    let uploader = payload
+        .get("uploader")
+        .and_then(Value::as_str)
+        .unwrap_or("none");
+    let custom_cmd = payload
+        .get("command")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .trim();
+
+    let output = if uploader == "picgo" {
+        let mut cmd = if cfg!(windows) {
+            let mut c = std::process::Command::new("cmd");
+            c.arg("/C").arg("picgo").arg("upload");
+            c
+        } else {
+            let mut c = std::process::Command::new("picgo");
+            c.arg("upload");
+            c
+        };
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        for p in &paths {
+            cmd.arg(p);
+        }
+        cmd.output()
+    } else if uploader == "custom" && !custom_cmd.is_empty() {
+        let quoted: Vec<String> = paths
+            .iter()
+            .map(|p| format!("\"{}\"", p.replace('"', "\\\"")))
+            .collect();
+        let joined = quoted.join(" ");
+        let full_cmd = if custom_cmd.contains("$IMAGES") {
+            custom_cmd.replace("$IMAGES", &joined)
+        } else {
+            format!("{custom_cmd} {joined}")
+        };
+        let mut cmd = if cfg!(windows) {
+            let mut c = std::process::Command::new("cmd");
+            c.args(["/C", &full_cmd]);
+            c
+        } else {
+            let mut c = std::process::Command::new("sh");
+            c.args(["-c", &full_cmd]);
+            c
+        };
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x0800_0000);
+        }
+        cmd.output()
+    } else {
+        return Ok(json!({ "ok": false, "urls": [], "error": "未配置图床上传服务" }));
+    };
+
+    let out = match output {
+        Ok(o) => o,
+        Err(e) => {
+            return Ok(json!({
+                "ok": false,
+                "urls": [],
+                "error": format!("上传命令执行失败: {e}")
+            }));
+        }
+    };
+
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    let urls: Vec<String> = stdout
+        .lines()
+        .flat_map(|line| line.split_whitespace())
+        .filter(|tok| tok.starts_with("http://") || tok.starts_with("https://"))
+        .map(|s| s.trim_matches(|c| matches!(c, '"' | '\'' | ',' | ')')).to_string())
+        .collect();
+
+    if urls.is_empty() {
+        let err_msg = if !stderr.trim().is_empty() {
+            stderr.trim().to_string()
+        } else if !stdout.trim().is_empty() {
+            stdout.trim().to_string()
+        } else {
+            "上传命令未返回有效图片 URL".to_string()
+        };
+        return Ok(json!({ "ok": false, "urls": [], "error": err_msg }));
+    }
+
+    Ok(json!({ "ok": true, "urls": urls }))
+}
+
 /// `images.startCopyAllImages([defaultFolder, isMove])`：批量复制文档图片。
 /// mac-only 且 fire-and-forget；Tauri 渲染层 isNode 分支自行遍历。
 pub fn start_copy_all_images() -> Result<Value, String> {

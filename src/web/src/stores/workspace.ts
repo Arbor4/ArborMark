@@ -240,7 +240,9 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
         dirty: false,
         loading: false,
       });
-      fs.addRecentFolder(path).catch(() => {});
+      if (useUi.getState().prefs.recordRecentHistory !== false) {
+        fs.addRecentFolder(path).catch(() => {});
+      }
       get().loadRecent();
     } catch (err) {
       set({ loading: false, error: String(err) });
@@ -256,6 +258,20 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
       const prefs = useUi.getState().prefs;
       const startupAction = String(prefs.startupAction ?? (restoreSessionEnabled ? "restore" : "blank"));
       if (startupAction === "blank" || !restoreSessionEnabled) return;
+      if (startupAction === "new") {
+        const ext = String(prefs.defaultFileExt ?? "md").replace(/^\./, "") || "md";
+        set({
+          activePath: `untitled://未命名.${ext}`,
+          content: "",
+          savedContent: "",
+          diskContent: "",
+          diskMtime: 0,
+          diskSize: 0,
+          dirty: false,
+          error: null,
+        });
+        return;
+      }
       if (startupAction === "folder" && typeof prefs.startupFolder === "string" && prefs.startupFolder.trim()) {
         const targetDir = prefs.startupFolder.trim();
         const st = await fs.stat(targetDir).catch(() => null);
@@ -525,8 +541,21 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const { savedContent, activePath } = get();
     const dirty = text !== savedContent;
     set({ content: text, dirty });
-    // 自动保存（500ms 防抖；设置在 UI store 里控制开关，这里默认开启）
-    if (dirty && activePath && useUiAutoSave()) {
+    if (dirty && activePath && !activePath.startsWith("help://")) {
+      if (isTauri()) {
+        import("@/bridge/ipc").then(({ invoke }) => {
+          invoke("setting.saveUnsavedDraft", {
+            name: pathUtil.name(activePath) || "autosave-draft.md",
+            content: text,
+          }).catch(() => {});
+        });
+      }
+      try {
+        localStorage.setItem("arbor.latest_draft", JSON.stringify({ name: pathUtil.name(activePath), content: text }));
+      } catch { /* ignore */ }
+    }
+    // 自动保存（800ms 防抖；设置在 UI store 里控制开关，这里默认开启）
+    if (dirty && activePath && !activePath.startsWith("untitled://") && useUiAutoSave()) {
       if (autoSaveTimer) clearTimeout(autoSaveTimer);
       autoSaveTimer = setTimeout(() => {
         get().save();
@@ -595,15 +624,31 @@ export const useWorkspace = create<WorkspaceState>((set, get) => ({
     const executeSave = async (): Promise<boolean> => {
       try {
         const { activePath, content, dirty } = get();
-        if (!activePath || activePath.startsWith("help://") || !dirty) return true;
+        if (!activePath || activePath.startsWith("help://")) return true;
+        let targetPath = activePath;
+        if (targetPath.startsWith("untitled://")) {
+          if (!isTauri()) return true;
+          const { invoke } = await import("@/bridge/ipc");
+          const defaultName = targetPath.replace(/^untitled:\/\//, "") || "未命名.md";
+          const res = await invoke<{ canceled: boolean; filePath: string | null }>("dialog.showSaveDialog", {
+            title: "保存文档",
+            defaultPath: defaultName,
+            filters: [{ name: "Markdown", extensions: ["md", "markdown", "txt"] }],
+          }).catch(() => null);
+          if (!res || res.canceled || !res.filePath) return false;
+          targetPath = res.filePath;
+          set({ activePath: targetPath });
+        } else if (!dirty) {
+          return true;
+        }
         // 保存时插入末尾换行符（偏好设置）
         let out = finalNewlineEnabled && content.length > 0 && !content.endsWith("\n") ? content + "\n" : content;
         const eol = useUi.getState().prefs.defaultEol;
         if (eol === "crlf") {
           out = out.replace(/\r?\n/g, "\r\n");
         }
-        await fs.writeFile(activePath, out);
-        const st = await fs.stat(activePath).catch(() => null);
+        await fs.writeFile(targetPath, out);
+        const st = await fs.stat(targetPath).catch(() => null);
         const diskMtime = st?.mtime ?? get().diskMtime;
         const diskSize = st?.size ?? out.length;
         // 内存编辑态统一以 LF 为基线（避免 CodeMirror / Milkdown 的 \n 序列化与 CRLF 落盘串产生假差异）；

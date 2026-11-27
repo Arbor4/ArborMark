@@ -15,6 +15,7 @@ import { DecorationSet } from "prosemirror-view";
 import hljs from "highlight.js/lib/common";
 import type { Node as ProseNode, NodeType } from "@milkdown/prose/model";
 import type { EditorView } from "@milkdown/prose/view";
+import { useUi } from "@/stores/ui";
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -604,8 +605,50 @@ export const codeBlockEscapePlugin = $prose(
 
           const isDelete = key === "Backspace" || key === "Delete";
           const isArrow = key === "ArrowDown" || key === "ArrowUp";
-          if (!isDelete && !isArrow) return false;
-          if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return false;
+          const isTab = key === "Tab";
+          if (!isDelete && !isArrow && !isTab) return false;
+          if (!isTab && (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey)) return false;
+
+          if (isTab && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            const { $from, $to, from, to } = sel;
+            if ($from.sameParent($to) && $from.parent.type.name === "code_block") {
+              const prefs = useUi.getState().prefs;
+              if (event.shiftKey && prefs.codeBlockShiftTab === false) return false;
+              const size = Math.max(1, Math.min(8, Number(prefs.codeIndentSize ?? 4) || 4));
+              const unit = " ".repeat(size);
+              const blockStart = $from.start();
+              const text = $from.parent.textContent;
+              const startOff = from - blockStart;
+              const endOff = to - blockStart;
+              const lineStartOff = text.lastIndexOf("\n", Math.max(0, startOff - 1)) + 1;
+              const endSearchIdx = endOff > startOff && text[endOff - 1] === "\n" ? endOff - 1 : endOff;
+              const nextNl = text.indexOf("\n", endSearchIdx);
+              const lineEndOff = nextNl === -1 ? text.length : nextNl;
+
+              if (sel.empty && !event.shiftKey) {
+                view.dispatch(view.state.tr.insertText(unit, from, to));
+                return true;
+              }
+              const slice = text.slice(lineStartOff, lineEndOff);
+              const lines = slice.split("\n");
+              const updated = event.shiftKey
+                ? lines.map((l) => {
+                    const m = new RegExp(`^ {1,${size}}|^\\t`).exec(l);
+                    return m ? l.slice(m[0].length) : l;
+                  })
+                : lines.map((l) => unit + l);
+              const nextSlice = updated.join("\n");
+              if (nextSlice !== slice) {
+                const tr = view.state.tr.insertText(nextSlice, blockStart + lineStartOff, blockStart + lineEndOff);
+                tr.setSelection(
+                  TextSelection.create(tr.doc, blockStart + lineStartOff, blockStart + lineStartOff + nextSlice.length),
+                );
+                view.dispatch(tr);
+              }
+              return true;
+            }
+            return false;
+          }
 
           if (isDelete && sel instanceof NodeSelection && isWholeBlock(sel.node)) {
             const tr = view.state.tr.deleteSelection();

@@ -200,7 +200,7 @@ export const DEFAULT_TOKENS: Required<
     '"SF Mono", "JetBrains Mono", "Cascadia Code", Consolas, "Liberation Mono", Menlo, monospace',
   "--am-editor-size": "16px",
   "--am-editor-line-height": "1.75",
-  "--am-editor-width": "860px",
+  "--am-editor-width": "clamp(760px, 72%, 1160px)",
   "--am-radius": "8px",
   "--am-radius-lg": "14px",
   "--am-glass-blur": "0px",

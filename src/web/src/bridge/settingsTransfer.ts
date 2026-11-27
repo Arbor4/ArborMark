@@ -2,7 +2,7 @@
  * 偏好设置导出 / 导入：JSON 快照（主题、字号、宽度、开关与全部 prefs）。
  * 桌面端走原生保存/打开对话框 + fs 读写；浏览器端走下载 / 文件选择。
  */
-import { useUi } from "@/stores/ui";
+import { useUi, EDITOR_WIDTHS } from "@/stores/ui";
 import { applyTheme, getAllThemes, getCurrentThemeId, getThemeMode, setThemeMode, type ThemeMode } from "@/theme/registry";
 import { invoke, isTauri } from "@/bridge/ipc";
 import { fs } from "@/bridge/fs";
@@ -84,8 +84,8 @@ export function applySettings(raw: unknown): { ok: boolean; error?: string } {
     }
   }
   if (typeof s.fontSize === "number") ui.setFontSize(s.fontSize);
-  if (typeof s.editorWidth === "string" && ["standard", "wide", "wider", "full"].includes(s.editorWidth)) {
-    ui.setEditorWidth(s.editorWidth as SettingsSnapshot["editorWidth"] as never);
+  if (typeof s.editorWidth === "string" && s.editorWidth in EDITOR_WIDTHS) {
+    ui.setEditorWidth(s.editorWidth as keyof typeof EDITOR_WIDTHS);
   }
   if (typeof s.lineNumbers === "boolean" && s.lineNumbers !== useUi.getState().lineNumbers) ui.toggleLineNumbers();
   if (typeof s.autoSave === "boolean") ui.setAutoSave(s.autoSave);

@@ -8,6 +8,7 @@ import katex from "katex";
 import hljs from "highlight.js/lib/common";
 import "katex/dist/katex.min.css";
 import { useUi } from "@/stores/ui";
+import { getKatexOptions } from "./milkdown/milkdownMath";
 
 const md: MarkdownIt = new MarkdownIt({
   html: false,
@@ -30,13 +31,9 @@ const md: MarkdownIt = new MarkdownIt({
 
 function renderKatex(tex: string, displayMode: boolean): string {
   try {
-    return katex.renderToString(tex, {
-      displayMode,
-      throwOnError: false,
-      strict: false,
-      trust: false,
-      output: "html",
-    });
+    const fmt = String(useUi.getState().prefs.exportHtmlMathFormat ?? "html");
+    const output = fmt === "mathml" ? "mathml" : "html";
+    return katex.renderToString(tex, getKatexOptions(displayMode, output));
   } catch {
     return `<code>${md.utils.escapeHtml(tex)}</code>`;
   }
@@ -253,6 +250,7 @@ export function renderMarkdown(source: string): string {
   const prefs = useUi.getState().prefs;
   md.set({
     html: prefs.blockHTML !== false,
+    linkify: prefs.enableLinkify !== false,
     breaks: prefs.preserveLineBreak === true,
     typographer: prefs.smartQuotes !== false || prefs.smartDashes !== false,
   });

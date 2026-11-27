@@ -8,6 +8,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import {
   bracketMatching, foldGutter, foldKeymap, indentOnInput, indentUnit,
   syntaxHighlighting, HighlightStyle, ensureSyntaxTree, syntaxTreeAvailable,
+  language, syntaxTree,
 } from "@codemirror/language";
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { tags } from "@lezer/highlight";
@@ -64,7 +65,7 @@ const codeTheme = EditorView.theme({
   ".cm-scroller:focus": { outline: "none !important" },
   ".cm-content": { fontFamily: "var(--am-font-mono)", caretColor: "var(--am-accent)", padding: "16px 0", outline: "none !important" },
   ".cm-content:focus": { outline: "none !important" },
-  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--am-accent)", borderLeftWidth: "2px", transition: "opacity 0.15s ease" },
+  ".cm-cursor, .cm-dropCursor": { borderLeftColor: "var(--am-accent)", borderLeftWidth: "2px" },
   "&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection": { backgroundColor: "var(--am-selection-bg)" },
   ".cm-gutters": { backgroundColor: "var(--am-bg-editor)", color: "var(--am-text-muted)", border: "none" },
   ".cm-activeLine": { backgroundColor: "color-mix(in srgb, var(--am-text) 4%, transparent)" },
@@ -96,31 +97,46 @@ function pairExtensions(prefs: Record<string, boolean | string | number>) {
  * 对于常规代码文件（一般 10~30ms 内完成），直接一次性构建全文语法树并更新状态，
  * 确保向下极速滚动时任意行均已上色，彻底告别滚动白字/不上色。
  */
+const warmupTimers = new WeakMap<EditorView, ReturnType<typeof setTimeout>>();
+
+function cancelWarmup(view: EditorView) {
+  const prev = warmupTimers.get(view);
+  if (prev !== undefined) {
+    clearTimeout(prev);
+    warmupTimers.delete(view);
+  }
+}
+
 function warmupSyntax(view: EditorView) {
+  cancelWarmup(view);
   if (!view.dom.isConnected) return;
+  if (!view.state.facet(language)) return;
   const docLen = view.state.doc.length;
-  if (docLen === 0) return;
+  if (docLen === 0 || syntaxTreeAvailable(view.state, docLen)) return;
 
   // 1. 同步快推进：先保证当前视口及下方 30,000 字符（约 500-1000 行）立即就绪
+  const prevTree = syntaxTree(view.state);
   const immediateUpto = Math.min(docLen, Math.max(view.viewport.to + 30000, 30000));
   const tree = ensureSyntaxTree(view.state, immediateUpto, 250);
-  if (tree) {
+  if (tree && tree !== prevTree) {
     view.dispatch({});
   }
 
   // 2. 若超大文件尚未全量就绪，在后台分片跑完剩余部分
   if (!syntaxTreeAvailable(view.state, docLen)) {
     const parseRest = () => {
-      if (!view.dom.isConnected) return;
-      const t = ensureSyntaxTree(view.state, docLen, 500);
-      if (t) {
+      warmupTimers.delete(view);
+      if (!view.dom.isConnected || !view.state.facet(language)) return;
+      const before = syntaxTree(view.state);
+      const t = ensureSyntaxTree(view.state, view.state.doc.length, 500);
+      if (t && t !== before) {
         view.dispatch({});
       }
-      if (!syntaxTreeAvailable(view.state, docLen)) {
-        setTimeout(parseRest, 16);
+      if (!syntaxTreeAvailable(view.state, view.state.doc.length)) {
+        warmupTimers.set(view, setTimeout(parseRest, 16));
       }
     };
-    setTimeout(parseRest, 0);
+    warmupTimers.set(view, setTimeout(parseRest, 0));
   }
 }
 
@@ -171,7 +187,7 @@ export function CodeEditor() {
               return el;
             },
           }),
-          drawSelection({ cursorBlinkRate: 1500 }), dropCursor(), EditorState.allowMultipleSelections.of(true),
+          drawSelection({ cursorBlinkRate: 1200 }), dropCursor(), EditorState.allowMultipleSelections.of(true),
           indentOnInput(), bracketMatching(), autocompletion(),
           rectangularSelection(), crosshairCursor(), highlightActiveLine(),
           syntaxHighlighting(codeHighlight), codeTheme,
@@ -219,11 +235,13 @@ export function CodeEditor() {
               return true;
             },
             scroll: (_e, view) => {
+              if (!view.state.facet(language)) return false;
               const vpTo = view.viewport.to;
               if (!syntaxTreeAvailable(view.state, vpTo)) {
+                const before = syntaxTree(view.state);
                 const target = Math.min(view.state.doc.length, vpTo + 30000);
                 const tree = ensureSyntaxTree(view.state, target, 50);
-                if (tree) view.dispatch({});
+                if (tree && tree !== before) view.dispatch({});
               }
               return false;
             },
@@ -272,6 +290,7 @@ export function CodeEditor() {
     });
     refreshFind();
     return () => {
+      cancelWarmup(view);
       captureFromCm(view);
       viewRef.current = null;
       setActiveEditor(null);
